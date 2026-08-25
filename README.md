@@ -3,7 +3,7 @@
 Motore di calcolo per scontrini fiscali italiani: righe, sconti, IVA multi-aliquota,
 arrotondamenti e resto. **Logica pura in Dart**, senza dipendenze da Flutter, database o I/O.
 
-[![CI](https://github.com/USERNAME/receipt_engine/actions/workflows/ci.yml/badge.svg)](https://github.com/USERNAME/receipt_engine/actions/workflows/ci.yml)
+[![CI](https://github.com/zanzaromirco-ship-it/receipt_engine/actions/workflows/ci.yml/badge.svg)](https://github.com/zanzaromirco-ship-it/receipt_engine/actions/workflows/ci.yml)
 
 ## Perché esiste
 
