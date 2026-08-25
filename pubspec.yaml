@@ -1,0 +1,11 @@
+name: receipt_engine
+description: Motore di calcolo per scontrini fiscali - righe, sconti, IVA multi-aliquota, arrotondamenti e resto. Logica pura, zero dipendenze.
+version: 0.1.0
+repository: https://github.com/USERNAME/receipt_engine
+
+environment:
+  sdk: ^3.4.0
+
+dev_dependencies:
+  lints: ^4.0.0
+  test: ^1.25.0
