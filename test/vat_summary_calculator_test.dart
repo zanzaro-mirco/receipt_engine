@@ -39,7 +39,7 @@ void main() {
   test('un allocatore diverso cambia il riepilogo senza toccare il calcolo',
       () {
     const VatSummaryCalculator custom =
-        VatSummaryCalculator(allocator: _AllOnLastAllocator());
+        VatSummaryCalculator(allocator: _AllOnLastLineAllocator());
 
     final List<VatBreakdown> summary = custom.build(
       lines: <ReceiptLine>[
@@ -56,20 +56,20 @@ void main() {
   });
 }
 
-/// Strategia alternativa: lo sconto grava tutto sull'aliquota più alta.
-class _AllOnLastAllocator implements DiscountAllocator {
-  const _AllOnLastAllocator();
+/// Strategia alternativa: lo sconto grava tutto sull'ultima riga.
+class _AllOnLastLineAllocator implements DiscountAllocator {
+  const _AllOnLastLineAllocator();
 
   @override
   List<Money> allocate({
-    required List<Money> grossByRate,
+    required List<Money> amounts,
     required Money subtotal,
     required Money discount,
   }) {
-    if (grossByRate.isEmpty) return const <Money>[];
+    if (amounts.isEmpty) return const <Money>[];
     return <Money>[
-      ...grossByRate.take(grossByRate.length - 1),
-      grossByRate.last - discount,
+      ...amounts.take(amounts.length - 1),
+      amounts.last - discount,
     ];
   }
 }

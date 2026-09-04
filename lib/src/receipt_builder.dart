@@ -6,9 +6,12 @@ import 'models/vat_rate.dart';
 import 'money.dart';
 import 'vat_summary_calculator.dart';
 
-/// Errore sollevato quando si opera su uno scontrino già chiuso.
+/// Errore sollevato quando si opera su un documento già chiuso.
+///
+/// Vale per lo scontrino e per il documento di reso: la macchina a stati è la
+/// stessa — aperto o chiuso — e non merita due errori distinti.
 class ReceiptClosedError extends StateError {
-  ReceiptClosedError() : super('Lo scontrino è già stato chiuso');
+  ReceiptClosedError() : super('Il documento è già stato chiuso');
 }
 
 /// Errore sollevato quando l'incasso non copre il totale.
@@ -108,6 +111,13 @@ class ReceiptBuilder {
       throw InsufficientPaymentError(total, paid);
     }
 
+    // Un solo calcolo: i totali di riga al netto dello sconto e il riepilogo
+    // per aliquota che ne discende escono dalla stessa ripartizione.
+    final DocumentTotals totals = _summaryCalculator.compute(
+      lines: _lines,
+      documentDiscount: discount,
+    );
+
     _closed = true;
     return Receipt(
       id: id,
@@ -115,10 +125,8 @@ class ReceiptBuilder {
       lines: _lines,
       documentDiscount: discount,
       paid: paid,
-      vatSummary: _summaryCalculator.build(
-        lines: _lines,
-        documentDiscount: discount,
-      ),
+      netLineTotals: totals.netLineTotals,
+      vatSummary: totals.vatSummary,
     );
   }
 

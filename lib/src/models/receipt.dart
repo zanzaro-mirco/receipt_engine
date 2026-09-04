@@ -15,13 +15,18 @@ class Receipt {
     required List<ReceiptLine> lines,
     required this.documentDiscount,
     required this.paid,
+    required List<Money> netLineTotals,
     required List<VatBreakdown> vatSummary,
-  })  : _lines = List<ReceiptLine>.unmodifiable(lines),
+  })  : assert(netLineTotals.length == lines.length,
+            'Un totale netto per ogni riga'),
+        _lines = List<ReceiptLine>.unmodifiable(lines),
+        _netLineTotals = List<Money>.unmodifiable(netLineTotals),
         _vatSummary = List<VatBreakdown>.unmodifiable(vatSummary);
 
   final String id;
   final DateTime issuedAt;
   final List<ReceiptLine> _lines;
+  final List<Money> _netLineTotals;
   final List<VatBreakdown> _vatSummary;
 
   /// Sconto applicato all'intero documento.
@@ -31,6 +36,18 @@ class Receipt {
   final Money paid;
 
   List<ReceiptLine> get lines => _lines;
+
+  /// Totale effettivo di ciascuna riga, nello stesso ordine di [lines]: il
+  /// totale di riga dopo che lo sconto di documento è stato ripartito.
+  ///
+  /// È quanto il cliente ha davvero pagato per quella riga, e quindi la base di
+  /// qualunque rimborso. Rimborsare `lines[i].total` restituirebbe anche la
+  /// quota di sconto di documento che su quella riga non è mai stata incassata.
+  ///
+  /// La somma è esattamente [total]: è l'invariante garantita dal
+  /// `DiscountAllocator`, e senza di quella un reso totale non tornerebbe a
+  /// zero per un centesimo.
+  List<Money> get netLineTotals => _netLineTotals;
 
   /// Riepilogo IVA per aliquota, ordinato per aliquota crescente.
   List<VatBreakdown> get vatSummary => _vatSummary;
