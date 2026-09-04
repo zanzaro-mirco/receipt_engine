@@ -28,6 +28,34 @@ void main() {
       }
     });
 
+    test("lo scorporo di un importo negativo è l'opposto di quello positivo",
+        () {
+      // Proprietà su cui si regge il riepilogo IVA dei resi: il documento di
+      // reso passa importi negativi dentro questo stesso calcolo invece di
+      // duplicarlo. Vale perché l'arrotondamento di Money è half-away-from-zero
+      // e quindi simmetrico: con un "half up" lo scorporo di -3,00 non sarebbe
+      // l'opposto di quello di +3,00 e uno scontrino stornato per intero
+      // lascerebbe un centesimo di imposta appeso.
+      for (int cents = 1; cents <= 2000; cents++) {
+        for (final VatRate rate in <VatRate>[
+          VatRate.ordinaria,
+          VatRate.ridotta,
+          VatRate.superRidotta,
+          VatRate.esente,
+        ]) {
+          final VatBreakdown positivo =
+              calculator.splitFromGross(Money(cents), rate);
+          final VatBreakdown negativo =
+              calculator.splitFromGross(Money(-cents), rate);
+
+          expect(negativo.taxable, -positivo.taxable,
+              reason: 'imponibile, $cents cent con aliquota $rate');
+          expect(negativo.tax, -positivo.tax,
+              reason: 'imposta, $cents cent con aliquota $rate');
+        }
+      }
+    });
+
     test('aliquota zero non genera imposta', () {
       final VatBreakdown r =
           calculator.splitFromGross(const Money(500), VatRate.esente);
