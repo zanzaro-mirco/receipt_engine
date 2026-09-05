@@ -11,6 +11,7 @@ import '../money.dart';
 /// `sealed` mantiene comunque l'esaustività: il compilatore segnala ogni
 /// `switch` sui sottotipi rimasto scoperto.
 abstract base class Discount {
+  /// Costruttore delle sottoclassi.
   const Discount({this.description = ''});
 
   /// Sconto percentuale (es. `Discount.percent(10)` per il 10%).
@@ -21,6 +22,8 @@ abstract base class Discount {
   static Discount amount(Money value, {String description = ''}) =>
       AmountDiscount(value, description: description);
 
+  /// Motivo dello sconto, da stampare sullo scontrino. Non entra nel
+  /// calcolo.
   final String description;
 
   /// Importo dello sconto calcolato su una base imponibile.
@@ -33,6 +36,7 @@ abstract base class Discount {
 
 /// Sconto espresso in percentuale.
 base class PercentageDiscount extends Discount {
+  /// Crea uno sconto percentuale. Rifiuta un valore fuori da 0-100.
   PercentageDiscount(this.value, {super.description = ''}) {
     if (value < 0 || value > 100) {
       throw ArgumentError.value(
@@ -40,6 +44,7 @@ base class PercentageDiscount extends Discount {
     }
   }
 
+  /// Percentuale da applicare: 10 per il 10%.
   final num value;
 
   @override
@@ -54,12 +59,14 @@ base class PercentageDiscount extends Discount {
 /// Se l'importo supera la base viene limitato alla base: è la traduzione
 /// concreta del contratto dichiarato in [Discount.appliedTo].
 base class AmountDiscount extends Discount {
+  /// Crea uno sconto a importo fisso. Rifiuta un importo negativo.
   AmountDiscount(this.value, {super.description = ''}) {
     if (value.isNegative) {
       throw ArgumentError.value(value, 'value', 'Sconto negativo non ammesso');
     }
   }
 
+  /// Importo da togliere, limitato alla base al momento del calcolo.
   final Money value;
 
   @override

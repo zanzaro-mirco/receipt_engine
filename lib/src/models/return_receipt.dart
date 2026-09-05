@@ -10,6 +10,8 @@ import 'vat_rate.dart';
 /// identificativo di prodotto: due righe con la stessa descrizione sono due
 /// righe distinte dello scontrino e si rendono separatamente.
 class ReturnLine {
+  /// Crea una riga di reso. Normalmente la costruisce `ReturnBuilder`,
+  /// che è l'unico a conoscere le quantità già rese.
   const ReturnLine({
     required this.lineIndex,
     required this.description,
@@ -21,7 +23,10 @@ class ReturnLine {
   /// Posizione della riga resa dentro `Receipt.lines`.
   final int lineIndex;
 
+  /// Descrizione ripresa dalla riga originale.
   final String description;
+
+  /// Aliquota ripresa dalla riga originale.
   final VatRate vatRate;
 
   /// Unità rese. Positiva.
@@ -48,6 +53,8 @@ class ReturnLine {
 /// segno. Chi deve mostrare all'operatore quanto tirare fuori dal cassetto usa
 /// [refund], che è positivo.
 class ReturnReceipt {
+  /// Costruito da `ReturnBuilder.close`, che è l'unico posto in cui le
+  /// quantità rese vengono confrontate con quelle vendute.
   ReturnReceipt({
     required this.id,
     required this.originalReceiptId,
@@ -57,15 +64,19 @@ class ReturnReceipt {
   })  : _lines = List<ReturnLine>.unmodifiable(lines),
         _vatSummary = List<VatBreakdown>.unmodifiable(vatSummary);
 
+  /// Identificativo del documento di reso.
   final String id;
 
   /// Identificativo dello scontrino stornato.
   final String originalReceiptId;
 
+  /// Istante di emissione del reso.
   final DateTime issuedAt;
+
   final List<ReturnLine> _lines;
   final List<VatBreakdown> _vatSummary;
 
+  /// Righe rese, ordinate come sull'originale. Non modificabile.
   List<ReturnLine> get lines => _lines;
 
   /// Riepilogo IVA a segno invertito, ordinato per aliquota crescente.

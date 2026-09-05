@@ -9,6 +9,10 @@ import 'receipt_line.dart';
 /// Per questo la classe non espone alcun metodo di mutazione e le righe sono
 /// restituite come lista non modificabile.
 class Receipt {
+  /// Costruito da `ReceiptBuilder.close`, che è l'unico posto in cui i
+  /// totali di riga e il riepilogo IVA vengono dalla stessa ripartizione
+  /// dello sconto. Costruirlo a mano con numeri incoerenti è possibile ed
+  /// è responsabilità di chi lo fa.
   Receipt({
     required this.id,
     required this.issuedAt,
@@ -23,7 +27,12 @@ class Receipt {
         _netLineTotals = List<Money>.unmodifiable(netLineTotals),
         _vatSummary = List<VatBreakdown>.unmodifiable(vatSummary);
 
+  /// Identificativo del documento. Lo assegna chi emette: il pacchetto non
+  /// gestisce la numerazione progressiva, che è materia di normativa e di
+  /// registratore di cassa.
   final String id;
+
+  /// Istante di emissione.
   final DateTime issuedAt;
   final List<ReceiptLine> _lines;
   final List<Money> _netLineTotals;
@@ -35,6 +44,7 @@ class Receipt {
   /// Importo incassato.
   final Money paid;
 
+  /// Righe del documento, in ordine di inserimento. Non modificabile.
   List<ReceiptLine> get lines => _lines;
 
   /// Totale effettivo di ciascuna riga, nello stesso ordine di [lines]: il

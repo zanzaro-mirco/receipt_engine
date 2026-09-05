@@ -26,6 +26,7 @@ abstract interface class DiscountAllocator {
 /// L'ultimo scaglione assorbe la differenza di arrotondamento: è il modo più
 /// semplice per garantire l'invariante senza inseguire i centesimi.
 class ProportionalDiscountAllocator implements DiscountAllocator {
+  /// Crea la strategia. Non ha stato: se ne può usare una sola istanza.
   const ProportionalDiscountAllocator();
 
   @override

@@ -11,6 +11,7 @@ import 'vat_summary_calculator.dart';
 /// di quelli, tre resi parziali da una unità ciascuno permetterebbero di
 /// restituire tre volte un articolo venduto una volta sola.
 class ExcessiveReturnError extends StateError {
+  /// Crea l'errore con la riga in questione, il richiesto e il residuo.
   ExcessiveReturnError({
     required this.lineIndex,
     required this.requested,
@@ -18,8 +19,13 @@ class ExcessiveReturnError extends StateError {
   }) : super('Riga $lineIndex: richieste $requested unità di reso, '
             'ma ne restano $remaining');
 
+  /// Posizione della riga nell'originale.
   final int lineIndex;
+
+  /// Quantità che si è tentato di rendere.
   final num requested;
+
+  /// Quantità che era ancora rendibile.
   final num remaining;
 }
 
@@ -32,6 +38,12 @@ class ExcessiveReturnError extends StateError {
 /// da fuori, vengono dall'originale. È il motivo per cui un reso non può
 /// contraddire lo scontrino che storna.
 class ReturnBuilder {
+  /// Apre un reso su [original].
+  ///
+  /// [previousReturns] sono i resi già emessi sullo stesso scontrino, che
+  /// il chiamante deve fornire: senza, il controllo sulle quantità guarda
+  /// solo questo documento e si può rendere più volte la stessa merce. Il
+  /// costruttore rifiuta i resi che appartengono a un altro scontrino.
   ReturnBuilder({
     required this.id,
     required this.original,
@@ -42,12 +54,15 @@ class ReturnBuilder {
         _summaryCalculator = summaryCalculator,
         _alreadyReturned = _sumPrevious(original, previousReturns);
 
+  /// Identificativo del documento di reso.
   final String id;
 
   /// Lo scontrino stornato.
   final Receipt original;
 
+  /// Istante di emissione del reso.
   final DateTime issuedAt;
+
   final VatSummaryCalculator _summaryCalculator;
 
   /// Quantità già resa per ciascuna riga dai documenti precedenti.
@@ -58,7 +73,10 @@ class ReturnBuilder {
 
   bool _closed = false;
 
+  /// Vero dopo [close]: da quel momento ogni operazione è rifiutata.
   bool get isClosed => _closed;
+
+  /// Vero finché non è stata aggiunta nessuna riga al reso.
   bool get isEmpty => _requested.isEmpty;
 
   /// Quantità ancora rendibile per la riga [lineIndex]: quanto è stato venduto,

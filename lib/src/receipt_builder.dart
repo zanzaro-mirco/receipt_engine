@@ -11,16 +11,21 @@ import 'vat_summary_calculator.dart';
 /// Vale per lo scontrino e per il documento di reso: la macchina a stati è la
 /// stessa — aperto o chiuso — e non merita due errori distinti.
 class ReceiptClosedError extends StateError {
+  /// Crea l'errore.
   ReceiptClosedError() : super('Il documento è già stato chiuso');
 }
 
 /// Errore sollevato quando l'incasso non copre il totale.
 class InsufficientPaymentError extends StateError {
+  /// Crea l'errore a partire dal dovuto e dall'incassato.
   InsufficientPaymentError(this.due, this.paid)
       : super('Incasso ${const PlainMoneyFormatter().format(paid)} inferiore '
             'al dovuto ${const PlainMoneyFormatter().format(due)}');
 
+  /// Totale del documento.
   final Money due;
+
+  /// Importo offerto, inferiore al dovuto.
   final Money paid;
 }
 
@@ -32,6 +37,11 @@ class InsufficientPaymentError extends StateError {
 /// arriva dall'esterno e può essere sostituito — è la stessa ragione per cui
 /// il builder non sa nulla di come si formatta un importo.
 class ReceiptBuilder {
+  /// Apre un nuovo scontrino.
+  ///
+  /// Senza [issuedAt] usa l'istante corrente. [summaryCalculator] si
+  /// sostituisce per cambiare il criterio di ripartizione dello sconto o
+  /// il regime di calcolo dell'imposta.
   ReceiptBuilder({
     required this.id,
     DateTime? issuedAt,
@@ -39,16 +49,25 @@ class ReceiptBuilder {
   })  : issuedAt = issuedAt ?? DateTime.now(),
         _summaryCalculator = summaryCalculator;
 
+  /// Identificativo che finirà sul documento.
   final String id;
+
+  /// Istante di emissione, fissato all'apertura e non alla chiusura.
   final DateTime issuedAt;
+
   final VatSummaryCalculator _summaryCalculator;
 
   final List<ReceiptLine> _lines = <ReceiptLine>[];
   Discount? _documentDiscount;
   bool _closed = false;
 
+  /// Vero dopo [close]: da quel momento ogni operazione è rifiutata.
   bool get isClosed => _closed;
+
+  /// Vero finché non è stata aggiunta nessuna riga.
   bool get isEmpty => _lines.isEmpty;
+
+  /// Numero di righe inserite finora.
   int get lineCount => _lines.length;
 
   /// Somma delle righe, al netto degli sconti di riga.

@@ -20,7 +20,12 @@ class VatRate implements Comparable<VatRate> {
   /// Operazione esente / non imponibile.
   static const VatRate esente = VatRate(0, label: 'Esente');
 
+  /// Percentuale intera: 22 per il 22%.
   final int percentage;
+
+  /// Descrizione per l'operatore. Non entra nel confronto fra aliquote:
+  /// due aliquote con la stessa percentuale sono la stessa aliquota, come
+  /// vuole il riepilogo fiscale, anche se le chiamano in modo diverso.
   final String label;
 
   @override

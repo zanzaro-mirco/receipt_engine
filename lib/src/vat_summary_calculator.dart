@@ -31,6 +31,11 @@ typedef DocumentTotals = ({
 /// ciclo di vita del documento e questo calcolo diventa testabile da solo,
 /// senza costruire uno scontrino.
 class VatSummaryCalculator {
+  /// Crea il calcolatore.
+  ///
+  /// [calculator] decide come si scorpora l'imposta, [allocator] come si
+  /// ripartisce lo sconto di documento: due scelte indipendenti, ed è il
+  /// motivo per cui arrivano da fuori invece di essere costruite qui.
   const VatSummaryCalculator({
     VatCalculator calculator = const VatCalculator(),
     DiscountAllocator allocator = const ProportionalDiscountAllocator(),

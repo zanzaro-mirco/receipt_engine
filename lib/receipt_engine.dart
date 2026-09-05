@@ -3,7 +3,7 @@
 /// Logica pura: nessuna dipendenza da Flutter, da un database o da I/O.
 /// È questo che rende il pacchetto testabile in millisecondi e riutilizzabile
 /// da un'app mobile, da un backend o da un tool a riga di comando.
-library receipt_engine;
+library;
 
 export 'src/discount_allocator.dart';
 export 'src/formatting/money_formatter.dart';

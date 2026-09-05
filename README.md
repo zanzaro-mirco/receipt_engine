@@ -133,10 +133,14 @@ I test non verificano solo i casi felici. Due esempi di invarianti verificate:
 
 Il pacchetto è funzionante e coperto da test. Cosa manca per considerarlo completo:
 
-- [x] Storni e resi (documento di reso collegato allo scontrino originale)
-- [ ] Pagamenti misti (contanti + elettronico sulla stessa transazione)
-- [ ] Serializzazione JSON per il trasporto verso un backend
-- [ ] Supporto ad aliquote di altri paesi (la struttura è già pronta)
+- ✅ Storni e resi (documento di reso collegato allo scontrino originale)
+- ⬜ Pagamenti misti (contanti + elettronico sulla stessa transazione)
+- ⬜ Serializzazione JSON per il trasporto verso un backend
+- ⬜ Supporto ad aliquote di altri paesi (la struttura è già pronta)
+
+<!-- I marcatori sono simboli e non caselle Markdown `- [ ]`: dartdoc legge
+     `[x]` come un riferimento a un elemento del codice e la pagina del
+     pacchetto su pub.dev si riempirebbe di riferimenti irrisolti. -->
 
 ## Licenza
 

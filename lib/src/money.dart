@@ -25,11 +25,19 @@ class Money implements Comparable<Money> {
   /// Valore in centesimi. Può essere negativo (storni, sconti).
   final int cents;
 
+  /// Vero per un importo di zero centesimi.
   bool get isZero => cents == 0;
+
+  /// Vero per un importo minore di zero: uno storno o un saldo a debito.
   bool get isNegative => cents < 0;
 
+  /// Somma di due importi.
   Money operator +(Money other) => Money(cents + other.cents);
+
+  /// Differenza fra due importi. Il risultato può essere negativo.
   Money operator -(Money other) => Money(cents - other.cents);
+
+  /// Importo cambiato di segno: è così che un reso diventa negativo.
   Money operator -() => Money(-cents);
 
   /// Moltiplica per un fattore arrotondando al centesimo.
@@ -48,6 +56,7 @@ class Money implements Comparable<Money> {
   @override
   int compareTo(Money other) => cents.compareTo(other.cents);
 
+  /// Confronto fra importi, sui centesimi.
   bool operator <(Money other) => cents < other.cents;
   bool operator <=(Money other) => cents <= other.cents;
   bool operator >(Money other) => cents > other.cents;

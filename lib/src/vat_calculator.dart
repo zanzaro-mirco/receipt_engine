@@ -4,6 +4,8 @@ import 'money.dart';
 
 /// Scomposizione di un importo lordo in imponibile e imposta.
 class VatBreakdown {
+  /// Crea una scomposizione. I tre importi devono essere coerenti fra
+  /// loro: a costruirli è [VatCalculator].
   const VatBreakdown({
     required this.rate,
     required this.gross,
@@ -11,6 +13,7 @@ class VatBreakdown {
     required this.tax,
   });
 
+  /// Aliquota a cui si riferisce la scomposizione.
   final VatRate rate;
 
   /// Importo IVA inclusa.
@@ -36,6 +39,7 @@ class VatBreakdown {
 /// calcolata sul totale. La normativa italiana richiede lo scorporo sul totale
 /// per aliquota, ed è quello che fa questa classe.
 class VatCalculator {
+  /// Crea il calcolatore. Non ha stato: se ne può usare una sola istanza.
   const VatCalculator();
 
   /// Scorpora l'IVA da un importo lordo.

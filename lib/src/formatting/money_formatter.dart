@@ -8,13 +8,16 @@ import '../money.dart';
 /// il dominio — ed è una responsabilità in meno per la classe che regge tutta
 /// l'aritmetica del pacchetto.
 abstract interface class MoneyFormatter {
+  /// Rappresentazione testuale di [value].
   String format(Money value);
 }
 
 /// Formato italiano: virgola come separatore decimale, simbolo in coda.
 class ItalianMoneyFormatter implements MoneyFormatter {
+  /// Crea il formattatore. [suffix] è quello che segue il numero.
   const ItalianMoneyFormatter({this.suffix = ' €'});
 
+  /// Testo aggiunto in coda all'importo, simbolo di valuta compreso.
   final String suffix;
 
   @override
@@ -29,6 +32,7 @@ class ItalianMoneyFormatter implements MoneyFormatter {
 
 /// Formato neutro per log e messaggi di errore.
 class PlainMoneyFormatter implements MoneyFormatter {
+  /// Crea il formattatore.
   const PlainMoneyFormatter();
 
   @override

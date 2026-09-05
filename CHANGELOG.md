@@ -1,6 +1,6 @@
 # Changelog
 
-## Non rilasciato
+## 0.2.0
 
 - **Storni e resi.** `ReturnReceipt` e `ReturnBuilder`: documento di reso
   collegato allo scontrino originale, totale o parziale, con riepilogo IVA a
@@ -16,6 +16,10 @@
   duplicarlo.
 - **Modifiche non compatibili:** `DiscountAllocator.allocate` prende `amounts`
   al posto di `grossByRate`; `Receipt` richiede `netLineTotals`.
+- Preparazione alla pubblicazione: documentazione dartdoc su tutta l'API
+  pubblica, `topics` e `issue_tracker` nel pubspec, `lints` e `test` aggiornati
+  all'ultima versione. La pipeline misura il punteggio di pub.dev a ogni push e
+  fallisce sotto 130 su 160.
 
 ## 0.1.0
 

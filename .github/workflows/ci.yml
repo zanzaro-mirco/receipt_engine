@@ -38,3 +38,29 @@ jobs:
         with:
           name: coverage
           path: coverage/lcov.info
+
+  # Il punteggio di pub.dev non è un controllo fatto una volta a mano: è la
+  # metrica su cui il pacchetto viene giudicato da chiunque lo apra, e come
+  # tutte le metriche che contano va misurata a ogni push.
+  #
+  # `pana` non gira su Windows — il suo sandbox rifiuta i percorsi con i due
+  # punti dei dischi — quindi la macchina di chi sviluppa non può dare questo
+  # riscontro. La pipeline sì, ed è l'unico posto dove il numero è riproducibile.
+  punteggio:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: stable
+
+      - run: dart pub get
+
+      # Soglia: al massimo 30 punti persi su 160, cioè mai sotto 130. È il
+      # criterio dichiarato nella roadmap, scritto dove può fallire invece che
+      # in un documento.
+      - name: Punteggio pub.dev
+        run: |
+          dart pub global activate pana
+          dart pub global run pana --no-warning --exit-code-threshold 30 .
