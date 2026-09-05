@@ -2,6 +2,8 @@
 
 ## 0.2.0
 
+Prima versione pubblicata su pub.dev.
+
 - **Storni e resi.** `ReturnReceipt` e `ReturnBuilder`: documento di reso
   collegato allo scontrino originale, totale o parziale, con riepilogo IVA a
   segno invertito e controllo che non si renda più di quanto venduto — resi

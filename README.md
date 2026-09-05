@@ -1,9 +1,13 @@
 # receipt_engine
 
 Motore di calcolo per scontrini fiscali italiani: righe, sconti, IVA multi-aliquota,
-arrotondamenti e resto. **Logica pura in Dart**, senza dipendenze da Flutter, database o I/O.
+storni e resi, arrotondamenti e resto. **Logica pura in Dart**, senza dipendenze da
+Flutter, database o I/O.
 
+[![pub package](https://img.shields.io/pub/v/receipt_engine.svg)](https://pub.dev/packages/receipt_engine)
+[![pub points](https://img.shields.io/pub/points/receipt_engine)](https://pub.dev/packages/receipt_engine/score)
 [![CI](https://github.com/zanzaro-mirco/receipt_engine/actions/workflows/ci.yml/badge.svg)](https://github.com/zanzaro-mirco/receipt_engine/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 ## Perché esiste
 
@@ -32,6 +36,19 @@ riutilizzabile da un'app mobile, da un backend o da un tool a riga di comando.
 | Ripartizione dello sconto come strategia sostituibile | È una scelta contabile, non un dettaglio di calcolo |
 | Formattazione fuori dal value object | Cambia con la lingua e col contesto: non deve stare nel dominio |
 | Zero dipendenze a runtime | Il dominio non deve sapere che esistono Flutter o un database |
+
+## Installazione
+
+```bash
+dart pub add receipt_engine
+```
+
+```dart
+import 'package:receipt_engine/receipt_engine.dart';
+```
+
+L'API completa è su
+[pub.dev/documentation/receipt_engine](https://pub.dev/documentation/receipt_engine/latest/).
 
 ## Esempio
 
@@ -114,6 +131,13 @@ dart test
 dart test --coverage=coverage
 ```
 
+La pipeline misura anche il punteggio di pub.dev a ogni push, con
+[`pana`](https://pub.dev/packages/pana), e fallisce se scende sotto 130 su 160:
+un criterio scritto dove può fallire vale più dello stesso criterio scritto in un
+documento. `pana` non gira su Windows — il suo sandbox rifiuta i percorsi con i due
+punti dei dischi — quindi la CI non è una comodità, è l'unico posto dove quel numero
+esiste.
+
 I test non verificano solo i casi felici. Due esempi di invarianti verificate:
 
 - `imponibile + imposta == lordo` per **ogni** importo da 1 a 2000 centesimi e per ogni aliquota;
@@ -131,7 +155,9 @@ I test non verificano solo i casi felici. Due esempi di invarianti verificate:
 
 ## Stato e prossimi passi
 
-Il pacchetto è funzionante e coperto da test. Cosa manca per considerarlo completo:
+Pubblicato su [pub.dev](https://pub.dev/packages/receipt_engine) con **160/160** al
+[punteggio](https://pub.dev/packages/receipt_engine/score). Cosa manca per
+considerarlo completo:
 
 - ✅ Storni e resi (documento di reso collegato allo scontrino originale)
 - ⬜ Pagamenti misti (contanti + elettronico sulla stessa transazione)
