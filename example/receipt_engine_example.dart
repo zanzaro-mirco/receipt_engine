@@ -7,13 +7,13 @@ void main() {
       .addLine(
         description: 'Caffè',
         unitPrice: Money.fromEuro(1.20),
-        vatRate: VatRate.ridotta,
+        vatRate: VatRate.reduced,
         quantity: 2,
       )
       .addLine(
         description: 'Vino',
         unitPrice: Money.fromEuro(12.20),
-        vatRate: VatRate.ordinaria,
+        vatRate: VatRate.standard,
         discount: Discount.percent(10),
       )
       .applyDocumentDiscount(Discount.amount(Money.fromEuro(1)))
@@ -27,13 +27,13 @@ void main() {
   }
 
   // Il cliente riporta il vino. Lo scontrino non si tocca: si emette un reso.
-  final ReturnReceipt storno =
+  final ReturnReceipt reversal =
       ReturnBuilder(id: 'R-0001', original: receipt).addLine(1).close();
 
   print('');
-  print('Reso ${storno.id} su ${storno.originalReceiptId}');
-  print('  Da restituire: ${fmt.format(storno.refund)}');
-  for (final VatBreakdown v in storno.vatSummary) {
+  print('Reso ${reversal.id} su ${reversal.originalReceiptId}');
+  print('  Da restituire: ${fmt.format(reversal.refund)}');
+  for (final VatBreakdown v in reversal.vatSummary) {
     print('  $v');
   }
 
@@ -44,5 +44,5 @@ void main() {
   print('  Totale di riga:  ${fmt.format(receipt.lines[1].total)}');
   print('  Davvero pagato:  ${fmt.format(receipt.netLineTotals[1])}');
   print('  Saldo dopo il reso: '
-      '${fmt.format(receipt.total + storno.total)}');
+      '${fmt.format(receipt.total + reversal.total)}');
 }

@@ -60,13 +60,13 @@ void main() {
       .addLine(
         description: 'Caffè',
         unitPrice: Money.fromEuro(1.20),
-        vatRate: VatRate.ridotta,
+        vatRate: VatRate.reduced,
         quantity: 2,
       )
       .addLine(
         description: 'Vino',
         unitPrice: Money.fromEuro(12.20),
-        vatRate: VatRate.ordinaria,
+        vatRate: VatRate.standard,
         discount: Discount.percent(10),
       )
       .applyDocumentDiscount(Discount.amount(Money.fromEuro(1)))
@@ -85,12 +85,12 @@ void main() {
 Il cliente riporta il vino. Lo scontrino non si tocca: si emette un reso.
 
 ```dart
-final ReturnReceipt storno =
+final ReturnReceipt reversal =
     ReturnBuilder(id: 'R-0001', original: receipt).addLine(1).close();
 
-print(fmt.format(storno.refund));               // 10,16 € da restituire
-print(fmt.format(receipt.lines[1].total));      // 10,98 € il totale di riga
-print(fmt.format(receipt.total + storno.total)); //  2,22 € resta il caffè
+print(fmt.format(reversal.refund));                // 10,16 € da restituire
+print(fmt.format(receipt.lines[1].total));         // 10,98 € il totale di riga
+print(fmt.format(receipt.total + reversal.total)); //  2,22 € resta il caffè
 ```
 
 Il rimborso è 10,16 e non 10,98 perché su quella riga il cliente aveva già

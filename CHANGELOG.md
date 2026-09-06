@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.3.0
+
+- **Modifiche non compatibili: le aliquote predefinite cambiano nome.**
+  `VatRate.ordinaria`, `ridotta`, `superRidotta` ed `esente` diventano
+  `standard`, `reduced`, `superReduced` ed `exempt`. Sono gli stessi termini
+  usati dalle direttive europee sull'IVA, e allineano l'API pubblica al resto
+  del pacchetto, che era già in inglese. Le etichette leggibili — `Ordinaria`,
+  `Ridotta`, `Super ridotta`, `Esente` — non cambiano: restano il testo che
+  finisce sullo scontrino.
+- Il resto del rinominio riguarda i test e l'esempio, e non tocca l'API.
+
 ## 0.2.0
 
 Prima versione pubblicata su pub.dev.

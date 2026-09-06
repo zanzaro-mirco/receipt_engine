@@ -13,15 +13,15 @@ void main() {
   test('raggruppa per aliquota e ordina in modo crescente', () {
     final List<VatBreakdown> summary = calculator.build(
       lines: <ReceiptLine>[
-        line(1220, VatRate.ordinaria),
-        line(200, VatRate.superRidotta),
-        line(100, VatRate.superRidotta),
+        line(1220, VatRate.standard),
+        line(200, VatRate.superReduced),
+        line(100, VatRate.superReduced),
       ],
       documentDiscount: const Money.zero(),
     );
 
     expect(summary.length, 2);
-    expect(summary.first.rate, VatRate.superRidotta);
+    expect(summary.first.rate, VatRate.superReduced);
     expect(summary.first.gross, const Money(300));
     expect(summary.last.tax, const Money(220));
   });
@@ -30,7 +30,7 @@ void main() {
     // È il beneficio concreto dell'estrazione da ReceiptBuilder: prima questa
     // logica si poteva verificare solo aprendo e chiudendo un documento.
     final List<VatBreakdown> summary = calculator.build(
-      lines: <ReceiptLine>[line(1000, VatRate.esente)],
+      lines: <ReceiptLine>[line(1000, VatRate.exempt)],
       documentDiscount: const Money.zero(),
     );
     expect(summary.single.tax, const Money.zero());
@@ -43,8 +43,8 @@ void main() {
 
     final List<VatBreakdown> summary = custom.build(
       lines: <ReceiptLine>[
-        line(1000, VatRate.superRidotta),
-        line(1000, VatRate.ordinaria),
+        line(1000, VatRate.superReduced),
+        line(1000, VatRate.standard),
       ],
       documentDiscount: const Money(200),
     );

@@ -9,16 +9,16 @@ class VatRate implements Comparable<VatRate> {
       : assert(percentage >= 0, 'Aliquota negativa non ammessa');
 
   /// Aliquota ordinaria italiana.
-  static const VatRate ordinaria = VatRate(22, label: 'Ordinaria');
+  static const VatRate standard = VatRate(22, label: 'Ordinaria');
 
   /// Aliquota ridotta (es. ristorazione, alcuni alimentari).
-  static const VatRate ridotta = VatRate(10, label: 'Ridotta');
+  static const VatRate reduced = VatRate(10, label: 'Ridotta');
 
   /// Aliquota super-ridotta.
-  static const VatRate superRidotta = VatRate(4, label: 'Super ridotta');
+  static const VatRate superReduced = VatRate(4, label: 'Super ridotta');
 
   /// Operazione esente / non imponibile.
-  static const VatRate esente = VatRate(0, label: 'Esente');
+  static const VatRate exempt = VatRate(0, label: 'Esente');
 
   /// Percentuale intera: 22 per il 22%.
   final int percentage;

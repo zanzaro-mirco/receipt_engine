@@ -36,14 +36,14 @@ void main() {
   });
 
   group('contratto rispettato da ogni sottotipo (Liskov)', () {
-    final List<Discount> tutti = <Discount>[
+    final List<Discount> all = <Discount>[
       Discount.percent(30),
       Discount.amount(const Money(10000)),
       ThreeForTwoDiscount(const Money(500), 7),
     ];
 
     test('lo sconto non è mai negativo e non supera mai la base', () {
-      for (final Discount d in tutti) {
+      for (final Discount d in all) {
         for (int base = 0; base <= 3000; base += 137) {
           final Money result = d.appliedTo(Money(base));
           expect(result.isNegative, isFalse, reason: '$d su $base');

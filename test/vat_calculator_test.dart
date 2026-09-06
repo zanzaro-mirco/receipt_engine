@@ -7,7 +7,7 @@ void main() {
   group('VatCalculator.splitFromGross', () {
     test('scorpora il 22% da un importo lordo', () {
       final VatBreakdown r =
-          calculator.splitFromGross(const Money(1220), VatRate.ordinaria);
+          calculator.splitFromGross(const Money(1220), VatRate.standard);
       expect(r.taxable, const Money(1000));
       expect(r.tax, const Money(220));
     });
@@ -17,9 +17,9 @@ void main() {
       for (int cents = 1; cents <= 2000; cents++) {
         final Money gross = Money(cents);
         for (final VatRate rate in <VatRate>[
-          VatRate.ordinaria,
-          VatRate.ridotta,
-          VatRate.superRidotta,
+          VatRate.standard,
+          VatRate.reduced,
+          VatRate.superReduced,
         ]) {
           final VatBreakdown r = calculator.splitFromGross(gross, rate);
           expect(r.taxable + r.tax, gross,
@@ -38,19 +38,19 @@ void main() {
       // lascerebbe un centesimo di imposta appeso.
       for (int cents = 1; cents <= 2000; cents++) {
         for (final VatRate rate in <VatRate>[
-          VatRate.ordinaria,
-          VatRate.ridotta,
-          VatRate.superRidotta,
-          VatRate.esente,
+          VatRate.standard,
+          VatRate.reduced,
+          VatRate.superReduced,
+          VatRate.exempt,
         ]) {
-          final VatBreakdown positivo =
+          final VatBreakdown positive =
               calculator.splitFromGross(Money(cents), rate);
-          final VatBreakdown negativo =
+          final VatBreakdown negative =
               calculator.splitFromGross(Money(-cents), rate);
 
-          expect(negativo.taxable, -positivo.taxable,
+          expect(negative.taxable, -positive.taxable,
               reason: 'imponibile, $cents cent con aliquota $rate');
-          expect(negativo.tax, -positivo.tax,
+          expect(negative.tax, -positive.tax,
               reason: 'imposta, $cents cent con aliquota $rate');
         }
       }
@@ -58,14 +58,14 @@ void main() {
 
     test('aliquota zero non genera imposta', () {
       final VatBreakdown r =
-          calculator.splitFromGross(const Money(500), VatRate.esente);
+          calculator.splitFromGross(const Money(500), VatRate.exempt);
       expect(r.tax, const Money.zero());
       expect(r.taxable, const Money(500));
     });
 
     test('addToTaxable aggiunge l imposta all imponibile', () {
       final VatBreakdown r =
-          calculator.addToTaxable(const Money(1000), VatRate.ordinaria);
+          calculator.addToTaxable(const Money(1000), VatRate.standard);
       expect(r.tax, const Money(220));
       expect(r.gross, const Money(1220));
     });

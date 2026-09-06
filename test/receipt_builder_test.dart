@@ -11,13 +11,13 @@ void main() {
           .addLine(
             description: 'Caffè',
             unitPrice: Money.fromEuro(1.20),
-            vatRate: VatRate.ridotta,
+            vatRate: VatRate.reduced,
             quantity: 2,
           )
           .addLine(
             description: 'Brioche',
             unitPrice: Money.fromEuro(1.50),
-            vatRate: VatRate.ridotta,
+            vatRate: VatRate.reduced,
           )
           .close(paid: Money.fromEuro(5));
 
@@ -32,7 +32,7 @@ void main() {
           .addLine(
             description: 'Acqua',
             unitPrice: Money.fromEuro(1),
-            vatRate: VatRate.ridotta,
+            vatRate: VatRate.reduced,
           )
           .close(paid: Money.fromEuro(1));
 
@@ -41,7 +41,7 @@ void main() {
           ReceiptLine(
             description: 'x',
             unitPrice: const Money(1),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
           ),
         ),
         throwsUnsupportedError,
@@ -55,7 +55,7 @@ void main() {
           .addLine(
             description: 'Maglietta',
             unitPrice: Money.fromEuro(20),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
             discount: Discount.percent(10),
           )
           .close(paid: Money.fromEuro(18));
@@ -68,7 +68,7 @@ void main() {
           .addLine(
             description: 'Penna',
             unitPrice: Money.fromEuro(2),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
             discount: Discount.amount(Money.fromEuro(5)),
           )
           .close(paid: const Money.zero());
@@ -81,7 +81,7 @@ void main() {
           .addLine(
             description: 'Articolo',
             unitPrice: Money.fromEuro(100),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
           )
           .applyDocumentDiscount(Discount.percent(20))
           .close(paid: Money.fromEuro(80));
@@ -102,23 +102,23 @@ void main() {
           .addLine(
             description: 'Pane',
             unitPrice: Money.fromEuro(2),
-            vatRate: VatRate.superRidotta,
+            vatRate: VatRate.superReduced,
           )
           .addLine(
             description: 'Vino',
             unitPrice: Money.fromEuro(12.20),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
           )
           .addLine(
             description: 'Pasta',
             unitPrice: Money.fromEuro(1),
-            vatRate: VatRate.superRidotta,
+            vatRate: VatRate.superReduced,
           )
           .close(paid: Money.fromEuro(20));
 
       expect(r.vatSummary.length, 2);
-      expect(r.vatSummary.first.rate, VatRate.superRidotta);
-      expect(r.vatSummary.last.rate, VatRate.ordinaria);
+      expect(r.vatSummary.first.rate, VatRate.superReduced);
+      expect(r.vatSummary.last.rate, VatRate.standard);
       expect(r.vatSummary.first.gross, Money.fromEuro(3));
       expect(r.vatSummary.last.tax, Money.fromEuro(2.20));
     });
@@ -129,24 +129,24 @@ void main() {
           .addLine(
             description: 'A',
             unitPrice: Money.fromEuro(33.33),
-            vatRate: VatRate.ordinaria,
+            vatRate: VatRate.standard,
           )
           .addLine(
             description: 'B',
             unitPrice: Money.fromEuro(11.11),
-            vatRate: VatRate.ridotta,
+            vatRate: VatRate.reduced,
           )
           .addLine(
             description: 'C',
             unitPrice: Money.fromEuro(7.77),
-            vatRate: VatRate.superRidotta,
+            vatRate: VatRate.superReduced,
           )
           .applyDocumentDiscount(Discount.percent(13))
           .close(paid: Money.fromEuro(100));
 
-      final Money sommaLordi =
+      final Money grossSum =
           Money.sum(r.vatSummary.map((VatBreakdown v) => v.gross));
-      expect(sommaLordi, r.total);
+      expect(grossSum, r.total);
       expect(r.totalTaxable + r.totalTax, r.total);
     });
   });
@@ -160,7 +160,7 @@ void main() {
       final ReceiptBuilder b = builder().addLine(
         description: 'Articolo',
         unitPrice: Money.fromEuro(10),
-        vatRate: VatRate.ordinaria,
+        vatRate: VatRate.standard,
       );
       expect(
         () => b.close(paid: Money.fromEuro(5)),
@@ -172,7 +172,7 @@ void main() {
       final ReceiptBuilder b = builder().addLine(
         description: 'Articolo',
         unitPrice: Money.fromEuro(10),
-        vatRate: VatRate.ordinaria,
+        vatRate: VatRate.standard,
       );
       b.close(paid: Money.fromEuro(10));
 
@@ -180,7 +180,7 @@ void main() {
         () => b.addLine(
           description: 'Altro',
           unitPrice: Money.fromEuro(1),
-          vatRate: VatRate.ordinaria,
+          vatRate: VatRate.standard,
         ),
         throwsA(isA<ReceiptClosedError>()),
       );
@@ -193,7 +193,7 @@ void main() {
         () => builder().addLine(
           description: 'X',
           unitPrice: Money.fromEuro(1),
-          vatRate: VatRate.ordinaria,
+          vatRate: VatRate.standard,
           quantity: 0,
         ),
         throwsArgumentError,
