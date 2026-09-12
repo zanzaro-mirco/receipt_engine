@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.1
+
+- **Correzione: l'ultima tranche di un reso su merce a peso veniva rifiutata.** Le
+  quantità sono `num`, e tre resi da 0,1 su una riga da 0,3 sommano a
+  `0,30000000000000004`: il residuo diventava `0.09999999999999998` e
+  `ExcessiveReturnError` scattava su un reso legittimo. I confronti fra quantità ora
+  ammettono una tolleranza relativa di `1e-9`, e `remainingQuantity` restituisce **zero**
+  invece del pulviscolo lasciato dalle sottrazioni fra `double`.
+- **Sette test di proprietà su scontrini generati**, in `test/properties`, con
+  generazione e semplificazione dei controesempi scritte a mano: `glados` non è
+  compatibile con Dart 3. Sono loro ad aver trovato il difetto qui sopra, e a essersi
+  ridotti da soli a «un centesimo, tre etti».
+- **Dichiarato un limite che prima non era scritto:** l'imposta stornata da più documenti
+  di reso può scostarsi di qualche centesimo da quella incassata, perché ogni documento
+  scorpora sui propri importi. Il denaro rimborsato resta invece sempre esatto.
+  `ARCHITECTURE.md` spiega perché non va corretto.
+
 ## 0.3.0
 
 - **Modifiche non compatibili: le aliquote predefinite cambiano nome.**

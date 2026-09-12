@@ -120,6 +120,75 @@ sottotipi con lo stesso test parametrico.
 un `DiscountAllocator`: ogni livello dipende da un'astrazione e non costruisce le
 proprie dipendenze.
 
+## Property-based testing, e le due cose che ha trovato
+
+I test a esempi dimostrano che il codice funziona sui casi a cui ha pensato chi lo ha
+scritto. È un limite serio in un motore di calcolo: gli arrotondamenti si rompono sui
+valori che a mano non si scelgono — 2,04 € per 1,8 kg, uno sconto dell'8% su tre righe
+con aliquote diverse.
+
+In `test/properties` ci sono sette invarianti verificate su scontrini **generati**: lo
+scorporo ricompone il lordo, il riepilogo somma al totale, lo sconto di documento non fa
+sparire centesimi, un reso totale è l'esatto opposto dello scontrino, spezzarlo non cambia
+il rimborso, l'ordine delle righe non cambia il totale.
+
+Il motorino è scritto a mano — un `Gen<T>` con generazione e semplificazione, un `forAll`,
+una sessantina di righe — per una ragione verificabile: `glados`, l'unico pacchetto Dart
+del genere, dichiara `sdk: >=2.12.0 <3.0.0` e non è compatibile con Dart 3.
+
+**La parte che conta è la semplificazione, non la generazione.** Il primo controesempio
+utile è uscito così:
+
+```
+Generato a partire da:   riga(3469c x 1.5, IVA 22%, sconto 8%)
+Controesempio più semplice:   riga(1c x 0.3, IVA 22%)
+```
+
+Da «uno scontrino rotto» a «un centesimo, tre etti»: è la differenza fra una segnalazione
+e una diagnosi.
+
+Il seme della sorgente casuale è **fisso**, e non diverso ogni volta. Una suite che
+fallisce su un caso che non si sa riprodurre è una suite che qualcuno disattiva. Per
+cercare più a fondo si allarga da fuori, senza toccare il codice:
+
+```bash
+PROPERTY_SEED=12345 dart test test/properties
+```
+
+### Primo ritrovamento: l'ultimo etto non si poteva rendere
+
+Le quantità sono `num`, e per la merce a peso sono `double`. Tre tranche da 0,1 sommano a
+`0,30000000000000004`, non a `0,3`: il residuo prima della terza diventava
+`0.09999999999999998` e il reso veniva **rifiutato**. Alla cassa significa non poter
+rimborsare l'ultimo pezzo di un articolo a peso.
+
+La correzione è una tolleranza relativa di `1e-9` sui confronti fra quantità — nove ordini
+di grandezza sopra il rumore dei `double`, sei sotto il grammo. La via pulita sarebbe stata
+rappresentare le quantità come interi scalati, che è ciò che `Money` fa con gli importi:
+non si può, perché la quantità arriva da fuori come `num` qualunque e un pacchetto
+pubblicato non cambia il tipo di un parametro pubblico per un caso limite.
+
+### Secondo ritrovamento: un limite, non un difetto
+
+Questo non lo avevo previsto. Una riga da 1,72 € al 22% porta 31 centesimi di imposta. Resa
+in due tranche da mezzo, ogni documento scorpora 86 centesimi e ne dichiara 16: **16 + 16 fa
+32**. L'imposta stornata supera di un centesimo quella incassata.
+
+Non è un errore di calcolo. Ogni documento di reso è un documento fiscale a sé e scorpora
+sui propri importi, come prescrive la norma: due arrotondamenti indipendenti non fanno
+l'arrotondamento della somma. Lo scarto è misurato e cresce come metà del numero di
+documenti — un centesimo su tre tranche, dieci su venti — mentre **il denaro rimborsato
+resta esatto in ogni caso**.
+
+Correggerlo si potrebbe, facendo dipendere l'imposta di un documento da quella dei
+precedenti. Non si deve: un documento fiscale deve poter essere ricalcolato da solo, e un
+reso la cui imposta non è lo scorporo dei suoi importi è un reso che non supera un
+controllo.
+
+Quindi la proprietà non pretende zero: pretende che lo scarto **resti legato al numero di
+documenti**. Se un giorno lo superasse, vorrebbe dire che gli errori hanno smesso di essere
+indipendenti e hanno cominciato a comporsi — e quello sarebbe un difetto vero.
+
 ## Dove ho consapevolmente semplificato
 
 - **`VatCalculator` è una classe concreta, non un'interfaccia.** Lo scorporo è
@@ -142,3 +211,11 @@ proprie dipendenze.
   questo livello.
 - **Il reso non porta con sé un metodo di rimborso.** Contante, storno sulla carta o
   buono sono una decisione di cassa; qui c'è solo l'importo.
+- **Le quantità restano `num`, con una tolleranza sui confronti.** Gli importi sono interi
+  perché il denaro non ammette approssimazioni; le quantità no, perché arrivano da fuori
+  come le manda una bilancia. Il prezzo è dichiarato: due quantità che differiscono di meno
+  di un miliardesimo sono la stessa quantità.
+- **L'imposta stornata da più documenti di reso può scostarsi di qualche centesimo da
+  quella incassata.** È aritmetica di arrotondamenti indipendenti, non un difetto, e la
+  sezione qui sopra spiega perché correggerla sarebbe peggio. Il denaro rimborsato invece
+  torna sempre esatto.

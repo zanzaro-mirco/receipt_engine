@@ -153,6 +153,17 @@ I test non verificano solo i casi felici. Due esempi di invarianti verificate:
   la somma dei rimborsi è esattamente quanto quella riga aveva incassato, verificato su
   millequattrocento combinazioni di prezzo e quantità.
 
+In più, in `test/properties`, sette invarianti verificate su scontrini **generati** invece
+che scelti: è lì che si rompono gli arrotondamenti, perché nessuno scrive a mano «2,04 € per
+1,8 kg con l'8% di sconto». Hanno già trovato un difetto vero — l'ultima tranche di un reso
+su merce a peso veniva rifiutata — e si sono ridotti da soli al caso minimo che lo mostra.
+
+Il seme è fisso, così un fallimento è sempre riproducibile. Per cercare più a fondo:
+
+```bash
+PROPERTY_SEED=12345 dart test test/properties
+```
+
 ## Stato e prossimi passi
 
 Pubblicato su [pub.dev](https://pub.dev/packages/receipt_engine) con **160/160** al

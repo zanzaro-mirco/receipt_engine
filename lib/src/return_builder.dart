@@ -81,10 +81,41 @@ class ReturnBuilder {
 
   /// Quantità ancora rendibile per la riga [lineIndex]: quanto è stato venduto,
   /// meno i resi già emessi, meno quello che sta per entrare in questo reso.
-  num remainingQuantity(int lineIndex) =>
-      original.lines[lineIndex].quantity -
-      _alreadyReturned[lineIndex] -
-      (_requested[lineIndex] ?? 0);
+  ///
+  /// Un residuo entro la tolleranza è **esattamente zero**, e non il pulviscolo
+  /// che resta dalle sottrazioni fra `double`: chi lo legge per sapere se resta
+  /// qualcosa da rendere deve leggere una risposta, non un artefatto.
+  num remainingQuantity(int lineIndex) {
+    final num remaining = original.lines[lineIndex].quantity -
+        _alreadyReturned[lineIndex] -
+        (_requested[lineIndex] ?? 0);
+    return remaining.abs() < _toleranceFor(original.lines[lineIndex].quantity)
+        ? 0
+        : remaining;
+  }
+
+  /// Tolleranza ammessa sul confronto fra quantità.
+  ///
+  /// Le quantità sono `num`, e per la merce a peso sono `double`: 0,1 non è
+  /// rappresentabile in binario, e tre tranche da un etto sommano a
+  /// 0,30000000000000004 invece che a 0,3. Senza tolleranza l'ultima tranche di
+  /// un reso spezzato veniva **rifiutata** — «richieste 0.1 unità di reso, ma ne
+  /// restano 0.09999999999999998» — e alla cassa significava non poter
+  /// rimborsare l'ultimo pezzo di un articolo a peso.
+  ///
+  /// Relativa e non assoluta, perché l'errore dei `double` è relativo. `1e-9` sta
+  /// nove ordini di grandezza sopra il rumore che un documento può accumulare, e
+  /// sei sotto il grammo, che è il passo più fine che una bilancia trasmette:
+  /// non c'è quantità reale che ci stia dentro per sbaglio.
+  ///
+  /// La via alternativa era rappresentare le quantità come interi scalati, che è
+  /// ciò che [Money] fa con gli importi. Non si può: la quantità arriva da fuori
+  /// come `num` qualunque, e un pacchetto pubblicato non cambia il tipo di un
+  /// parametro pubblico per un centesimo di caso limite.
+  static num _toleranceFor(num quantity) {
+    final num magnitude = quantity.abs();
+    return (magnitude < 1 ? 1 : magnitude) * 1e-9;
+  }
 
   /// Vero quando non resta più niente da rendere su nessuna riga.
   bool get isFullyReturned {
@@ -108,7 +139,7 @@ class ReturnBuilder {
     if (qty <= 0) {
       throw ArgumentError.value(qty, 'quantity', 'Deve essere positiva');
     }
-    if (qty > remaining) {
+    if (qty > remaining + _toleranceFor(original.lines[lineIndex].quantity)) {
       throw ExcessiveReturnError(
         lineIndex: lineIndex,
         requested: qty,

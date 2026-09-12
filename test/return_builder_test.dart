@@ -299,4 +299,104 @@ void main() {
           isTrue);
     });
   });
+
+  // I casi qui sotto vengono dai test di proprietà in `test/properties`, e
+  // stanno qui perché un caso limite trovato una volta va tenuto fermo con un
+  // nome: la ricerca casuale esplora, la regressione custodisce.
+  group('Merce a peso, resa a pezzi', () {
+    test(
+        'tre tranche da un etto su tre etti venduti: la terza non va rifiutata',
+        () {
+      final Receipt sold = (ReceiptBuilder(id: 'S')
+            ..addLine(
+              description: 'Prosciutto',
+              unitPrice: const Money(2000),
+              vatRate: VatRate.standard,
+              quantity: 0.3,
+            ))
+          .close(paid: const Money(600));
+
+      // 0,1 + 0,1 + 0,1 fa 0,30000000000000004 in virgola mobile binaria.
+      // Senza tolleranza il residuo prima della terza tranche è
+      // 0.09999999999999998, e alla cassa non si può rimborsare l'ultimo etto.
+      final List<ReturnReceipt> emitted = <ReturnReceipt>[];
+      for (int i = 0; i < 3; i++) {
+        emitted.add(
+          (ReturnBuilder(id: 'R$i', original: sold, previousReturns: emitted)
+                ..addLine(0, quantity: 0.1))
+              .close(),
+        );
+      }
+
+      expect(Money.sum(emitted.map((ReturnReceipt r) => r.total)), -sold.total,
+          reason: 'Le tre tranche devono restituire esattamente il venduto');
+
+      final ReturnBuilder after = ReturnBuilder(
+        id: 'R3',
+        original: sold,
+        previousReturns: emitted,
+      );
+      expect(after.remainingQuantity(0), 0,
+          reason: 'Un residuo entro la tolleranza si legge zero, non 5e-17');
+      expect(after.isFullyReturned, isTrue);
+    });
+
+    test('rendere più del venduto resta un errore', () {
+      final Receipt sold = (ReceiptBuilder(id: 'S')
+            ..addLine(
+              description: 'Prosciutto',
+              unitPrice: const Money(2000),
+              vatRate: VatRate.standard,
+              quantity: 0.3,
+            ))
+          .close(paid: const Money(600));
+
+      // La tolleranza copre il rumore dei double, non una quantità in più: un
+      // decimo di troppo sta otto ordini di grandezza sopra.
+      expect(
+        () => ReturnBuilder(id: 'R', original: sold).addLine(0, quantity: 0.4),
+        throwsA(isA<ExcessiveReturnError>()),
+      );
+    });
+  });
+
+  group('Imposta stornata su più documenti', () {
+    test('due tranche stornano un centesimo di imposta in più del venduto', () {
+      final Receipt sold = (ReceiptBuilder(id: 'S')
+            ..addLine(
+              description: 'Merce',
+              unitPrice: const Money(858),
+              vatRate: VatRate.standard,
+              quantity: 0.2,
+            ))
+          .close(paid: const Money(200));
+
+      expect(sold.total, const Money(172));
+      expect(sold.totalTax, const Money(31));
+
+      final ReturnReceipt first = (ReturnBuilder(id: 'R1', original: sold)
+            ..addLine(0, quantity: 0.1))
+          .close();
+      final ReturnReceipt second = (ReturnBuilder(
+        id: 'R2',
+        original: sold,
+        previousReturns: <ReturnReceipt>[first],
+      )..addLine(0, quantity: 0.1))
+          .close();
+
+      // Il denaro torna esatto.
+      expect(first.total + second.total, -sold.total);
+
+      // L'imposta no: 86 centesimi scorporati due volte danno 16 + 16, mentre
+      // 172 scorporati una volta danno 31. Non è un errore di calcolo ma
+      // l'aritmetica di due arrotondamenti indipendenti — ogni documento di
+      // reso è un documento fiscale a sé e scorpora sui propri importi. Questo
+      // test esiste per fissare il comportamento, non per approvarlo: se un
+      // giorno cambia, deve cambiare per una decisione e non per caso.
+      expect(first.totalTax, const Money(-16));
+      expect(second.totalTax, const Money(-16));
+      expect(first.totalTax + second.totalTax, const Money(-32));
+      expect(first.totalTax + second.totalTax, isNot(-sold.totalTax));
+    });
+  });
 }
