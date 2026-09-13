@@ -54,6 +54,10 @@ class ReceiptJson {
   static const int schemaVersion = 2;
 
   /// Rappresentazione JSON di uno scontrino.
+  ///
+  /// Solleva un [UnsupportedError] se una riga porta uno sconto definito fuori
+  /// dal pacchetto: il formato conosce solo gli sconti percentuali e a
+  /// importo, e uno sconto che non si sa scrivere non si omette.
   Map<String, Object?> encodeReceipt(Receipt receipt) => <String, Object?>{
         'schemaVersion': schemaVersion,
         'type': 'receipt',
@@ -203,10 +207,10 @@ class ReceiptJson {
   /// uno sconto del 10% e uno di dieci centesimi sarebbero indistinguibili
   /// sul filo.
   ///
-  /// Il caso finale non è difensivo per abitudine. `Discount` è
-  /// `abstract base class` e non `sealed`, quindi un sottotipo definito
-  /// altrove è possibile, e il compilatore non può accorgersi che questo
-  /// `switch` non lo copre. Meglio un errore esplicito che uno sconto che
+  /// Il caso finale non è difensivo per abitudine. `Discount` è aperto per
+  /// scelta — chi usa il pacchetto può definire il proprio sconto — e quindi
+  /// il compilatore non può accorgersi che questo `switch` non copre un
+  /// sottotipo nato altrove. Meglio un errore esplicito che uno sconto che
   /// sparisce silenziosamente dal documento.
   Map<String, Object?> _encodeDiscount(Discount discount) => switch (discount) {
         PercentageDiscount(:final num value) => <String, Object?>{

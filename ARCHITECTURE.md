@@ -10,7 +10,7 @@ lib/src/
   money.dart                    value object: aritmetica in centesimi
   models/
     vat_rate.dart               aliquota
-    discount.dart               gerarchia sealed degli sconti
+    discount.dart               gerarchia aperta degli sconti
     receipt_line.dart           riga
     receipt.dart                documento immutabile
     return_receipt.dart         documento di reso, a segno invertito
@@ -30,7 +30,7 @@ lib/src/
 | **Builder** | `ReceiptBuilder`, `ReturnBuilder` | Il documento si costruisce per passi e si chiude una volta sola. La macchina a stati è minima — aperto o chiuso — ed è la stessa per entrambi |
 | **Strategy** | `DiscountAllocator` | Il criterio di ripartizione dello sconto è una scelta contabile, non un dettaglio di calcolo: si sostituisce senza riaprire il motore |
 | **Polimorfismo al posto del branching** | `Discount` | Ogni sconto sa calcolarsi da solo |
-| **Sealed class** | `Discount` | Estendibile, ma il compilatore segnala ogni `switch` incompleto |
+| **Classe base aperta** | `Discount` | Estendibile anche da fuori dal pacchetto (`base`: si estende, non si implementa). Il prezzo: uno `switch` sui sottotipi non è mai esaustivo |
 | **Separazione dominio / presentazione** | `MoneyFormatter` | La formattazione cambia per locale e per contesto: non deve stare nel dominio |
 | **Documento come fatto immutabile** | `Receipt`, `ReturnReceipt` | Uno scontrino emesso non si corregge: se ne emette un secondo che lo storna. Il modello rende questa l'unica strada possibile |
 
@@ -316,6 +316,11 @@ qualcuno che ha già scritto il suo parser e per lui un nome di campo è un cont
 - **Non esiste il reso di un reso, né un termine oltre il quale non si rende.** Sono
   regole commerciali, non fiscali: cambiano da catena a catena e starebbero sopra
   questo livello.
+- **Uno sconto definito fuori dal pacchetto non si serializza.** È la conseguenza diretta
+  di aver tenuto `Discount` aperto: il JSON conosce gli sconti percentuali e a importo, e
+  `encodeReceipt` rifiuta con un `UnsupportedError` uno scontrino che ne porta un altro.
+  Renderlo estendibile vorrebbe dire un registro di codec per sconto, e nessuno lo ha ancora
+  chiesto. Fino a quel giorno, un errore è meglio di uno sconto che sparisce dal documento.
 - **Le date serializzate si normalizzano in UTC.** `issuedAt` viene scritto con
   `toIso8601String` dopo `toUtc`, quindi un documento emesso con una data locale si rilegge
   con lo stesso istante ma senza il fuso di partenza. L'istante è il dato che conta; un

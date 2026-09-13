@@ -27,6 +27,14 @@ Receipt buildReceipt() => (ReceiptBuilder(
               Discount.amount(const Money(50), description: 'Buono')))
         .close(paid: const Money(1000));
 
+/// Uno sconto definito fuori dal pacchetto, come può fare chiunque lo usi.
+final class BuyTwoPayOneDiscount extends Discount {
+  BuyTwoPayOneDiscount() : super(description: 'Prendi 2 paghi 1');
+
+  @override
+  Money appliedTo(Money base) => base.multipliedBy(0.5);
+}
+
 void main() {
   const ReceiptJson codec = ReceiptJson();
 
@@ -328,6 +336,27 @@ void main() {
       final Map<String, Object?> json = codec.encodeReceipt(mixed())
         ..remove('payments');
       expect(() => codec.decodeReceipt(json), throwsFormatException);
+    });
+  });
+
+  group('Sconti definiti da chi usa il pacchetto', () {
+    test('funzionano nello scontrino, ma non si scrivono in JSON', () {
+      // `Discount` è aperto per scelta: il builder accetta lo sconto e lo
+      // calcola senza sapere cosa sia. Il formato invece non lo conosce, e
+      // uno sconto che non si sa scrivere non si omette.
+      final Receipt receipt = (ReceiptBuilder(
+        id: 'X-1',
+        issuedAt: DateTime.utc(2026, 9, 13),
+      )..addLine(
+              description: 'Merce',
+              unitPrice: const Money(1000),
+              vatRate: VatRate.standard,
+              quantity: 2,
+              discount: BuyTwoPayOneDiscount()))
+          .close(paid: const Money(1000));
+
+      expect(receipt.total, const Money(1000));
+      expect(() => codec.encodeReceipt(receipt), throwsUnsupportedError);
     });
   });
 }

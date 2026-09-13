@@ -2,14 +2,24 @@ import '../money.dart';
 
 /// Sconto applicabile a una riga o all'intero documento.
 ///
-/// Gerarchia chiusa e polimorfa: ogni tipo di sconto sa calcolarsi da solo.
+/// Gerarchia aperta e polimorfa: ogni tipo di sconto sa calcolarsi da solo.
 /// La versione precedente usava uno `switch` su un enum, e questo violava
 /// l'Open/Closed Principle — aggiungere uno sconto quantità o un "3x2"
 /// obbligava a *modificare* il metodo di calcolo. Così invece si aggiunge una
-/// sottoclasse e non si tocca niente di esistente.
+/// sottoclasse e non si tocca niente di esistente, **anche da fuori dal
+/// pacchetto**: chi lo usa può definire il proprio sconto senza aspettare una
+/// nuova versione.
 ///
-/// `sealed` mantiene comunque l'esaustività: il compilatore segnala ogni
-/// `switch` sui sottotipi rimasto scoperto.
+/// La classe è `base` e non `sealed`, per scelta. `base` lascia estendere ma
+/// non implementare: un sottotipo passa sempre dal costruttore, e quindi ha
+/// sempre una [description]. `sealed` avrebbe dato l'esaustività degli
+/// `switch` al prezzo di chiudere la gerarchia a chi usa il pacchetto — cioè
+/// di rinunciare esattamente al motivo per cui la gerarchia esiste.
+///
+/// Il costo è dichiarato: uno `switch` sui sottotipi di `Discount` non è mai
+/// esaustivo, e il compilatore non segnala il caso mancante. Chi ne scrive
+/// uno deve prevedere un caso finale — `ReceiptJson` lo fa, e un sottotipo che
+/// non conosce lo rifiuta con un errore invece di farlo sparire dal documento.
 abstract base class Discount {
   /// Costruttore delle sottoclassi.
   const Discount({this.description = ''});
