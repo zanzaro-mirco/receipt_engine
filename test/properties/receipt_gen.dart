@@ -21,8 +21,12 @@ class LineSpec {
   /// Prezzo unitario in centesimi, IVA inclusa.
   final int unitPriceCents;
 
-  /// Percentuale dell'aliquota: 22 per il 22%.
-  final int ratePercentage;
+  /// Percentuale dell'aliquota: 22 per il 22%, 5.5 per il 5,5%.
+  ///
+  /// Le aliquote frazionarie sono nel mazzo di proposito: lo scorporo divide
+  /// per `100 + aliquota`, e un divisore non intero è esattamente il caso in
+  /// cui un arrotondamento può comportarsi diversamente.
+  final num ratePercentage;
 
   /// Quantità in decimi di unità.
   ///
@@ -48,7 +52,7 @@ class LineSpec {
 
   @override
   String toString() => 'riga(${unitPriceCents}c x $quantity, '
-      'IVA $ratePercentage%'
+      'IVA $rate'
       '${discountPercent == 0 ? '' : ', sconto $discountPercent%'})';
 }
 
@@ -96,8 +100,13 @@ class ReceiptSpec {
       ].join('\n');
 }
 
-/// Le aliquote fra cui pescare: quelle italiane vere, zero compreso.
-const List<int> _ratePercentages = <int>[0, 4, 5, 10, 22];
+/// Le aliquote fra cui pescare: quelle italiane vere, zero compreso, più le
+/// due frazionarie francesi e quella irlandese.
+///
+/// Non perché il pacchetto conosca le regole di quei paesi — non le conosce —
+/// ma perché una percentuale non intera è il caso che la `0.4.0` ha reso
+/// possibile, e le sette proprietà devono valere anche lì.
+const List<num> _ratePercentages = <num>[0, 2.1, 4, 5, 5.5, 10, 13.5, 22];
 
 /// Generatore di righe.
 ///

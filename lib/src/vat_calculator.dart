@@ -57,7 +57,7 @@ class VatCalculator {
         tax: const Money.zero(),
       );
     }
-    final int divisor = 100 + rate.percentage;
+    final num divisor = 100 + rate.percentage;
     final Money taxable = Money((gross.cents * 100 / divisor).round());
     final Money tax = gross - taxable;
     return VatBreakdown(rate: rate, gross: gross, taxable: taxable, tax: tax);

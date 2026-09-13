@@ -1,6 +1,6 @@
 name: receipt_engine
 description: Motore di calcolo per scontrini fiscali - righe, sconti, IVA multi-aliquota, storni e resi, arrotondamenti e resto. Logica pura, zero dipendenze.
-version: 0.3.1
+version: 0.4.0
 repository: https://github.com/zanzaro-mirco/receipt_engine
 issue_tracker: https://github.com/zanzaro-mirco/receipt_engine/issues
 documentation: https://github.com/zanzaro-mirco/receipt_engine/blob/main/ARCHITECTURE.md

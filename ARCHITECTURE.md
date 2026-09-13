@@ -209,6 +209,11 @@ indipendenti e hanno cominciato a comporsi — e quello sarebbe un difetto vero.
 - **Non esiste il reso di un reso, né un termine oltre il quale non si rende.** Sono
   regole commerciali, non fiscali: cambiano da catena a catena e starebbero sopra
   questo livello.
+- **Le regole fiscali di altri paesi non ci sono, e non è un ritardo.** Dalla `0.4.0`
+  l'aliquota è un `num`, così il 5,5% francese si esprime e si scorpora: l'aritmetica è
+  aperta a qualunque percentuale. Il dominio no. Sapere quale bene sta a quale aliquota o
+  quando vale il reverse charge è conoscenza normativa che invecchia, e tenerla dentro un
+  pacchetto di calcolo significherebbe rilasciare una versione a ogni circolare.
 - **Il reso non porta con sé un metodo di rimborso.** Contante, storno sulla carta o
   buono sono una decisione di cassa; qui c'è solo l'importo.
 - **Le quantità restano `num`, con una tolleranza sui confronti.** Gli importi sono interi

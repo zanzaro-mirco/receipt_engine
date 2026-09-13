@@ -1,5 +1,29 @@
 # Changelog
 
+## 0.4.0
+
+- **Modifica non compatibile: `VatRate.percentage` è un `num` e non più un `int`.** La
+  documentazione della classe si vantava di non essere un `enum` «perché le aliquote
+  cambiano per legge e per paese», e intanto il tipo escludeva metà delle aliquote
+  europee: la Francia ha il 5,5% e il 2,1%, l'Irlanda il 13,5%. Ora
+  `const VatRate(5.5, label: 'Taux réduit')` si scrive e si calcola.
+  **Cosa si rompe:** solo l'assegnazione della percentuale a un `int`
+  (`final int p = rate.percentage;` diventa `final num p = rate.percentage;`). Costruire
+  un'aliquota da un letterale intero, confrontarla, ordinarla e scorporarla funziona
+  esattamente come prima.
+- **`VatRate.toString()` scrive all'italiana e senza decimali inutili:** `22%`, `5,5%`, e
+  `VatRate(22.0)` resta `22%` invece di diventare `22.0%`.
+- **`VatRate(22)` e `VatRate(22.0)` sono la stessa aliquota.** Lo erano già per come Dart
+  confronta i numeri; ora c'è un test che lo tiene fermo, perché è ciò che impedisce al
+  riepilogo IVA di spaccarsi in due righe a seconda di come è stato scritto un letterale.
+- **Le sette proprietà girano anche sulle aliquote frazionarie:** il generatore pesca pure
+  2,1%, 5,5% e 13,5%, cioè divisori non interi nello scorporo.
+- **README onesto sui punti aperti.** La sezione «Stato e prossimi passi» annunciava il
+  supporto alle aliquote di altri paesi e sosteneva che «la struttura è già pronta». La
+  prima era una promessa che non intendo mantenere, la seconda era falsa — il tipo `int`
+  la smentiva. Ora la sezione dice quali sono i due punti aperti veri e perché il dominio
+  resta italiano.
+
 ## 0.3.1
 
 - **Correzione: l'ultima tranche di un reso su merce a peso veniva rifiutata.** Le

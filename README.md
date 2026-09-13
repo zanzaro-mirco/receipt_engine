@@ -167,13 +167,21 @@ PROPERTY_SEED=12345 dart test test/properties
 ## Stato e prossimi passi
 
 Pubblicato su [pub.dev](https://pub.dev/packages/receipt_engine) con **160/160** al
-[punteggio](https://pub.dev/packages/receipt_engine/score). Cosa manca per
-considerarlo completo:
+[punteggio](https://pub.dev/packages/receipt_engine/score).
 
-- ✅ Storni e resi (documento di reso collegato allo scontrino originale)
-- ⬜ Pagamenti misti (contanti + elettronico sulla stessa transazione)
-- ⬜ Serializzazione JSON per il trasporto verso un backend
-- ⬜ Supporto ad aliquote di altri paesi (la struttura è già pronta)
+Quello che manca, in ordine di quanto lo chiederebbe chi lo sta già usando:
+
+- ⬜ Serializzazione JSON, per il trasporto verso un backend
+- ⬜ Pagamenti misti (contanti ed elettronico sulla stessa transazione)
+
+E una cosa che **non** arriverà, che è diverso dal mancare. Fino alla `0.3.1` questa riga
+prometteva il «supporto ad aliquote di altri paesi»: la promessa è ritirata. Dalla `0.4.0`
+un'aliquota è un `num`, quindi il 5,5% francese o il 13,5% irlandese si **calcolano** senza
+problemi — ma sapere quale bene sta a quale aliquota, quando vale il reverse charge e come
+si numera un documento in un altro ordinamento è lavoro di dominio, non di aritmetica.
+`receipt_engine` resta un motore a IVA italiana con i conti aperti a qualunque percentuale,
+e chi ha bisogno delle regole di un altro paese sa già, leggendo questa riga, che qui non
+le trova.
 
 <!-- I marcatori sono simboli e non caselle Markdown `- [ ]`: dartdoc legge
      `[x]` come un riferimento a un elemento del codice e la pagina del

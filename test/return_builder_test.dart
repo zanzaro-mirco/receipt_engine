@@ -293,7 +293,7 @@ void main() {
           returnFor(receipt()).addEverything().close();
       expect(
         reversal.vatSummary.map((VatBreakdown v) => v.rate.percentage),
-        <int>[4, 22],
+        <num>[4, 22],
       );
       expect(reversal.vatSummary.every((VatBreakdown v) => v.gross.isNegative),
           isTrue);
