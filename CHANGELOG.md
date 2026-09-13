@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.6.1
+
+Solo documentazione e test: nessuna riga di codice eseguibile è cambiata.
+
+- **La dartdoc di `Discount` diceva il falso.** Sosteneva che la gerarchia fosse `sealed` e
+  che il compilatore segnalasse ogni `switch` sui sottotipi rimasto scoperto. La classe è
+  `abstract base class`, ed è aperta per scelta: chi usa il pacchetto può definire il
+  proprio sconto. Il commento ora lo dice, insieme al costo — uno `switch` sui sottotipi di
+  `Discount` non è mai esaustivo, e va scritto con un caso finale.
+- **`ReceiptJson.encodeReceipt` documenta l'`UnsupportedError`** che solleva su uno sconto
+  definito fuori dal pacchetto. Il comportamento c'era già nella `0.5.0` e nella `0.6.0`;
+  ora è scritto, dichiarato fra le semplificazioni e tenuto fermo da un test.
+
 ## 0.6.0
 
 - **Pagamenti misti.** `ReceiptBuilder.closeWithPayments(List<Payment>)` chiude uno
