@@ -189,6 +189,68 @@ Quindi la proprietà non pretende zero: pretende che lo scarto **resti legato al
 documenti**. Se un giorno lo superasse, vorrebbe dire che gli errori hanno smesso di essere
 indipendenti e hanno cominciato a comporsi — e quello sarebbe un difetto vero.
 
+## Pagamenti misti, e da dove esce il resto
+
+Fino alla `0.5.0` uno scontrino si chiudeva con un importo solo, e `change` era
+`paid - total`. Alla cassa non funziona così: si pagano quindici euro con la carta e il
+resto in contanti.
+
+**Il resto esce dal cassetto.** Si può restituire solo quello che è entrato in un mezzo da
+cui si può restituire: la carta addebita l'importo esatto, e un buono pasto non dà resto per
+legge. Da qui una regola sola, che `closeWithPayments` controlla dopo aver verificato che
+l'incasso copra il totale:
+
+> la parte versata con mezzi che **non danno resto** non può superare il totale.
+
+Sembra una regola diversa da «il resto non supera i contanti», ed è la stessa. Con `T` il
+totale, `N` quanto versato senza resto e `C` quanto versato in contanti, il resto è
+`N + C − T`, e chiedere che non superi `C` è chiedere `N ≤ T`. La scelta fra le due
+formulazioni è di leggibilità: la seconda si controlla senza calcolare il resto, e dice
+subito *quale* pagamento è di troppo.
+
+Una conseguenza piacevole: `Receipt.change` resta `paid - total`. La formula non è cambiata,
+è cambiato quello che il builder lascia passare.
+
+**`PaymentMethod` è aperto come `VatRate`.** Contanti ed elettronico sono predefiniti; il
+buono pasto, il buono spesa di un cliente, il pagamento con l'app di un altro sono di chi usa
+il pacchetto. L'unica cosa che il motore deve sapere su un mezzo è `givesChange`.
+
+### Nessuna rottura nell'API Dart, una rottura sul filo
+
+Dart non ha l'overloading, quindi `close({required Money paid})` non poteva accettare anche
+una lista. Invece di rendere `paid` opzionale e controllare a runtime che si passi uno solo
+dei due argomenti, c'è un secondo metodo, `closeWithPayments`: è il tipo a impedire di
+passarli entrambi. `close(paid:)` diventa un pagamento in contanti, e mantiene l'ordine dei
+suoi controlli — un incasso negativo non è un `Payment` valido, ma chi lo passava riceveva
+`InsufficientPaymentError` e continua a riceverlo.
+
+Il costruttore di `Receipt` accetta i pagamenti come parametro **facoltativo**: chi lo
+costruisce a mano come prima ottiene un pagamento in contanti pari a `paid`.
+
+La versione però è `0.6.0` e non `0.5.1`, e la ragione sta nel JSON. I pagamenti entrano nel
+formato, e il formato passa allo schema 2. Un documento dello schema 1 si rilegge; ma un
+servizio fermo alla `0.5.0` che riceve un documento scritto dalla `0.6.0` lo rifiuta, come
+deve. Con `^0.5.0` in due servizi diversi, uno aggiornato e uno no, una `0.5.1` avrebbe rotto
+la comunicazione fra i due senza che nessuno avesse cambiato un vincolo. Il pacchetto non ha
+rotto la sua API; ha rotto il suo formato, e per chi lo usa da un backend è la stessa cosa.
+
+### Cosa ha detto la falsificazione
+
+Tolta la regola dal builder — la condizione disattivata, tutto il resto intatto:
+
+- tre test dedicati falliscono: la carta sola oltre il totale, la carta oltre il totale con
+  dei contanti, il buono pasto oltre il totale;
+- **una** proprietà fallisce, quella che prova a chiudere con un pagamento elettronico oltre
+  il totale;
+- l'altra proprietà sul resto — *il resto non supera quanto versato con mezzi che danno
+  resto* — **resta verde**.
+
+L'ultima riga è la lezione. Quella proprietà è vera su tutti gli scontrini che il generatore
+produce, ma il generatore produce solo pagamenti validi: una proprietà verificata su input
+validi non può accorgersi che il codice ha smesso di rifiutare quelli invalidi. Serve una
+proprietà che costruisca apposta l'input sbagliato e pretenda il rifiuto — ed è quella che
+ha fallito.
+
 ## Il formato JSON, e perché la rilettura non ricalcola
 
 `ReceiptJson` sta in `src/serialization/` e non dentro i modelli, per la stessa ragione per
@@ -264,7 +326,14 @@ qualcuno che ha già scritto il suo parser e per lui un nome di campo è un cont
   quando vale il reverse charge è conoscenza normativa che invecchia, e tenerla dentro un
   pacchetto di calcolo significherebbe rilasciare una versione a ogni circolare.
 - **Il reso non porta con sé un metodo di rimborso.** Contante, storno sulla carta o
-  buono sono una decisione di cassa; qui c'è solo l'importo.
+  buono sono una decisione di cassa; qui c'è solo l'importo. Con i pagamenti misti la
+  domanda diventa più visibile — uno scontrino pagato metà con la carta e metà in contanti,
+  su cosa si rimborsa? — e la risposta resta la stessa: lo decide la cassa, non il motore.
+- **Il buono pasto che fa perdere l'eccedenza non è modellato.** In pratica un buono da 8 €
+  su un conto da 7,50 si accetta e i 50 centesimi si perdono. Qui un mezzo che non dà resto
+  e supera il totale è un errore: è la scelta prudente, perché un'eccedenza persa è un
+  incasso che nessuno ha davvero ricevuto, e va dichiarata da chi la vuole, non concessa di
+  default.
 - **Le quantità restano `num`, con una tolleranza sui confronti.** Gli importi sono interi
   perché il denaro non ammette approssimazioni; le quantità no, perché arrivano da fuori
   come le manda una bilancia. Il prezzo è dichiarato: due quantità che differiscono di meno

@@ -1,4 +1,5 @@
 import '../models/discount.dart';
+import '../models/payment.dart';
 import '../models/receipt.dart';
 import '../models/receipt_line.dart';
 import '../models/return_receipt.dart';
@@ -42,7 +43,15 @@ class ReceiptJson {
   /// È ciò che distingue un formato da uno scarico di campi: senza, la prima
   /// modifica incompatibile arriva addosso a chi ha già dei documenti salvati
   /// e non ha modo di sapere quale forma abbiano.
-  static const int schemaVersion = 1;
+  ///
+  /// - **1** (`0.5.0`): l'incasso è un importo solo, `paid`.
+  /// - **2** (`0.6.0`): si aggiungono i `payments`, uno per mezzo di
+  ///   pagamento. `paid` resta, ed è la loro somma.
+  ///
+  /// Un documento con schema 1 si legge ancora: i suoi pagamenti diventano
+  /// un solo pagamento in contanti pari a `paid`, che è quello che `paid` ha
+  /// sempre significato — un resto si dà solo sul contante.
+  static const int schemaVersion = 2;
 
   /// Rappresentazione JSON di uno scontrino.
   Map<String, Object?> encodeReceipt(Receipt receipt) => <String, Object?>{
@@ -52,6 +61,10 @@ class ReceiptJson {
         'issuedAt': receipt.issuedAt.toUtc().toIso8601String(),
         'documentDiscount': receipt.documentDiscount.cents,
         'paid': receipt.paid.cents,
+        'payments': <Object?>[
+          for (final Payment payment in receipt.payments)
+            _encodePayment(payment),
+        ],
         'lines': <Object?>[
           for (final ReceiptLine line in receipt.lines) _encodeLine(line),
         ],
@@ -71,7 +84,22 @@ class ReceiptJson {
   /// dominio rifiuta — una quantità negativa, per esempio. La distinzione è
   /// voluta: il primo è un problema di trasporto, il secondo di contenuto.
   Receipt decodeReceipt(Map<String, Object?> json) {
-    _checkEnvelope(json, 'receipt');
+    final int version = _checkEnvelope(json, 'receipt');
+    final Money paid = _money(json, 'paid');
+    final List<Payment>? payments = version < 2
+        ? null
+        : <Payment>[
+            for (final Object? payment in _list(json, 'payments'))
+              _decodePayment(_asMap(payment, 'payments')),
+          ];
+    if (payments != null &&
+        Money.sum(payments.map((Payment p) => p.amount)) != paid) {
+      // Due dati salvati che si contraddicono: non si sceglie quale dei due
+      // credere, perché qualunque scelta inventerebbe un incasso.
+      throw FormatException(
+        'I pagamenti non sommano all\'incasso dichiarato ${paid.cents}',
+      );
+    }
     return Receipt(
       id: _string(json, 'id'),
       issuedAt: _dateTime(json, 'issuedAt'),
@@ -80,7 +108,8 @@ class ReceiptJson {
           _decodeLine(_asMap(line, 'lines')),
       ],
       documentDiscount: _money(json, 'documentDiscount'),
-      paid: _money(json, 'paid'),
+      paid: paid,
+      payments: payments,
       netLineTotals: <Money>[
         for (final Object? amount in _list(json, 'netLineTotals'))
           Money(_integer(amount, 'netLineTotals')),
@@ -111,6 +140,8 @@ class ReceiptJson {
 
   /// Documento di reso riletto da [json].
   ReturnReceipt decodeReturnReceipt(Map<String, Object?> json) {
+    // Il reso non ha pagamenti — non porta un metodo di rimborso — e la sua
+    // forma è la stessa negli schemi 1 e 2.
     _checkEnvelope(json, 'return');
     return ReturnReceipt(
       id: _string(json, 'id'),
@@ -143,6 +174,15 @@ class ReceiptJson {
         'vatRate': _encodeRate(line.vatRate),
         'quantity': line.quantity,
         'amount': line.amount.cents,
+      };
+
+  Map<String, Object?> _encodePayment(Payment payment) => <String, Object?>{
+        'method': <String, Object?>{
+          'code': payment.method.code,
+          'label': payment.method.label,
+          'givesChange': payment.method.givesChange,
+        },
+        'amount': payment.amount.cents,
       };
 
   Map<String, Object?> _encodeRate(VatRate rate) => <String, Object?>{
@@ -205,6 +245,27 @@ class ReceiptJson {
         amount: _money(json, 'amount'),
       );
 
+  /// Il mezzo si ricostruisce dal documento, `givesChange` compreso, e non
+  /// si confronta con i mezzi predefiniti: un buono pasto registrato da chi
+  /// usa il pacchetto deve tornare indietro com'era, anche se questa versione
+  /// non lo conosce.
+  Payment _decodePayment(Map<String, Object?> json) {
+    final Map<String, Object?> method = _asMap(json['method'], 'method');
+    final Object? givesChange = method['givesChange'];
+    if (givesChange is! bool) {
+      throw FormatException(
+          'Il campo "givesChange" non è un booleano: $givesChange');
+    }
+    return Payment(
+      PaymentMethod(
+        _string(method, 'code'),
+        label: _string(method, 'label'),
+        givesChange: givesChange,
+      ),
+      _money(json, 'amount'),
+    );
+  }
+
   VatRate _decodeRate(Map<String, Object?> json) => VatRate(
         _number(json, 'percentage'),
         label: _string(json, 'label'),
@@ -231,7 +292,7 @@ class ReceiptJson {
 
   // ---------------------------------------------------------------- aiutanti
 
-  void _checkEnvelope(Map<String, Object?> json, String expectedType) {
+  int _checkEnvelope(Map<String, Object?> json, String expectedType) {
     final int version = _integer(json['schemaVersion'], 'schemaVersion');
     if (version > schemaVersion) {
       throw FormatException(
@@ -245,6 +306,7 @@ class ReceiptJson {
         'Atteso un documento di tipo "$expectedType", trovato "$type"',
       );
     }
+    return version;
   }
 
   String _string(Map<String, Object?> json, String field) {

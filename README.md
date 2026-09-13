@@ -35,6 +35,7 @@ riutilizzabile da un'app mobile, da un backend o da un tool a riga di comando.
 | Sconti polimorfi invece di uno `switch` | Aggiungere un "3x2" non richiede di modificare il calcolo esistente |
 | Ripartizione dello sconto come strategia sostituibile | È una scelta contabile, non un dettaglio di calcolo |
 | Formattazione fuori dal value object | Cambia con la lingua e col contesto: non deve stare nel dominio |
+| Il resto esce solo da mezzi che danno resto | Totale 22 €, pagati 25 con la carta: i 3 € di resto non sono in cassa. È un errore, non un resto |
 | Serializzazione fuori dai modelli, e a mano | Uno scontrino non deve sapere come viaggia. `json_serializable` porterebbe `build_runner` e file generati per sei modelli che cambiano di rado |
 | La rilettura non ricalcola | Un documento fiscale emesso si rilegge, non si rifà: altrimenti una correzione futura agli arrotondamenti cambierebbe scontrini già consegnati |
 | Zero dipendenze a runtime | Il dominio non deve sapere che esistono Flutter o un database |
@@ -103,6 +104,29 @@ sulle righe rese — imposta compresa.
 L'esempio completo, eseguibile, è in
 [`example/receipt_engine_example.dart`](example/receipt_engine_example.dart).
 
+## Pagamenti misti
+
+```dart
+// Totale 22 €: 15 con la carta, 10 in contanti.
+final Receipt receipt = builder.closeWithPayments(<Payment>[
+  Payment.electronic(Money.fromEuro(15)),
+  Payment.cash(Money.fromEuro(10)),
+]);
+
+print(fmt.format(receipt.change)); // 3,00 €, dal cassetto
+```
+
+La regola che conta: **il resto esce solo da mezzi che danno resto**. Pagare 25 € con la
+sola carta su un totale di 22 non produce 3 € di resto, solleva `ChangeNotAvailableError`:
+la carta ha addebitato 25 e nel cassetto non è entrato niente. E non basta che ci siano dei
+contanti — 23 con la carta e 5 in contanti fanno un resto di 6, e dal cassetto ne possono
+uscire al massimo 5.
+
+`close(paid:)` resta la scorciatoia per il caso comune, un pagamento in contanti, e si
+comporta esattamente come prima. I mezzi di pagamento sono aperti come le aliquote: un
+buono pasto è `PaymentMethod('meal_voucher', label: 'Buono pasto')`, e non dà resto a meno
+di dirlo.
+
 ## Fuori dal processo: JSON
 
 Chi lo usa da un backend, o dietro una coda, deve poter scrivere uno scontrino da qualche
@@ -132,6 +156,10 @@ cliente.
 di campi: rileggere un documento scritto da una versione più recente del pacchetto solleva
 un errore invece di produrre uno scontrino monco.
 
+È servito subito. La `0.6.0` aggiunge i pagamenti e scrive lo schema 2; un documento salvato
+con la `0.5.0` si rilegge ancora, e i suoi pagamenti diventano un solo pagamento in
+contanti — che è quello che `paid` ha sempre voluto dire.
+
 ## Struttura
 
 ```
@@ -148,7 +176,7 @@ lib/
     serialization/receipt_json.dart  lettura e scrittura JSON
     models/
       vat_rate.dart  discount.dart  receipt_line.dart
-      receipt.dart   return_receipt.dart
+      receipt.dart   return_receipt.dart  payment.dart
 example/                           programma eseguibile: emissione e storno
 test/                              invarianti, contratto dei sottotipi, allocazione
 ```
@@ -201,22 +229,19 @@ PROPERTY_SEED=12345 dart test test/properties
 Pubblicato su [pub.dev](https://pub.dev/packages/receipt_engine) con **160/160** al
 [punteggio](https://pub.dev/packages/receipt_engine/score).
 
-Quello che manca, in ordine di quanto lo chiederebbe chi lo sta già usando:
+Le tre cose che questa sezione elencava come mancanti — storni e resi, serializzazione
+JSON, pagamenti misti — sono dentro. Non ne aggiungo altre per riempire la lista: la
+prossima la decide chi lo usa, e le [issue](https://github.com/zanzaro-mirco/receipt_engine/issues)
+sono il posto dove dirlo.
 
-- ⬜ Pagamenti misti (contanti ed elettronico sulla stessa transazione)
-
-E una cosa che **non** arriverà, che è diverso dal mancare. Fino alla `0.3.1` questa riga
-prometteva il «supporto ad aliquote di altri paesi»: la promessa è ritirata. Dalla `0.4.0`
+Resta una cosa che **non** arriverà, che è diverso dal mancare. Fino alla `0.3.1` questa
+sezione prometteva il «supporto ad aliquote di altri paesi»: la promessa è ritirata. Dalla `0.4.0`
 un'aliquota è un `num`, quindi il 5,5% francese o il 13,5% irlandese si **calcolano** senza
 problemi — ma sapere quale bene sta a quale aliquota, quando vale il reverse charge e come
 si numera un documento in un altro ordinamento è lavoro di dominio, non di aritmetica.
 `receipt_engine` resta un motore a IVA italiana con i conti aperti a qualunque percentuale,
 e chi ha bisogno delle regole di un altro paese sa già, leggendo questa riga, che qui non
 le trova.
-
-<!-- I marcatori sono simboli e non caselle Markdown `- [ ]`: dartdoc legge
-     `[x]` come un riferimento a un elemento del codice e la pagina del
-     pacchetto su pub.dev si riempirebbe di riferimenti irrisolti. -->
 
 ## Licenza
 

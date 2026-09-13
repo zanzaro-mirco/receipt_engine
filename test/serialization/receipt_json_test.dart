@@ -38,12 +38,22 @@ void main() {
     // dall'altra parte del filo c'è qualcuno che ha già scritto il suo parser.
     test('uno scontrino si scrive esattamente così', () {
       expect(codec.encodeReceipt(buildReceipt()), <String, Object?>{
-        'schemaVersion': 1,
+        'schemaVersion': 2,
         'type': 'receipt',
         'id': 'T-0001',
         'issuedAt': '2026-09-13T10:30:00.000Z',
         'documentDiscount': 50,
         'paid': 1000,
+        'payments': <Object?>[
+          <String, Object?>{
+            'method': <String, Object?>{
+              'code': 'cash',
+              'label': 'Contanti',
+              'givesChange': true,
+            },
+            'amount': 1000,
+          },
+        ],
         'lines': <Object?>[
           <String, Object?>{
             'description': 'Caffè',
@@ -93,7 +103,7 @@ void main() {
           .close();
 
       expect(codec.encodeReturnReceipt(reso), <String, Object?>{
-        'schemaVersion': 1,
+        'schemaVersion': 2,
         'type': 'return',
         'id': 'R-0001',
         'originalReceiptId': 'T-0001',
@@ -146,12 +156,32 @@ void main() {
       expect(() => codec.decodeReceipt(json), throwsFormatException);
     });
 
-    test('uno schema più vecchio invece si legge', () {
-      // Un documento scritto prima non è un errore: è il caso normale di chi
-      // ha dei documenti salvati da mesi. Oggi c'è un solo schema, e il test
-      // serve a fissare la direzione in cui il controllo è asimmetrico.
-      final Map<String, Object?> json = receiptMap()..['schemaVersion'] = 1;
-      expect(codec.decodeReceipt(json).total, buildReceipt().total);
+    test('un documento scritto dalla 0.5.0 si legge ancora', () {
+      // Non una mappa rimaneggiata ma il testo esatto che la 0.5.0 produceva
+      // per lo scontrino di riferimento: è quello che chi l'ha usata ha già
+      // salvato. Senza `payments`, e con lo schema 1.
+      const String writtenBy050 = '''
+{"schemaVersion":1,"type":"receipt","id":"T-0001",
+ "issuedAt":"2026-09-13T10:30:00.000Z","documentDiscount":50,"paid":1000,
+ "lines":[
+  {"description":"Caffè","unitPrice":110,
+   "vatRate":{"percentage":10,"label":"Ridotta"},"quantity":2},
+  {"description":"Prosciutto","unitPrice":2040,
+   "vatRate":{"percentage":22,"label":"Ordinaria"},"quantity":0.3,
+   "discount":{"kind":"percent","value":10,"description":"Promo"}}],
+ "netLineTotals":[206,515],
+ "vatSummary":[
+  {"rate":{"percentage":10,"label":"Ridotta"},"gross":206,"taxable":187,"tax":19},
+  {"rate":{"percentage":22,"label":"Ordinaria"},"gross":515,"taxable":422,"tax":93}]}
+''';
+      final Receipt again =
+          codec.decodeReceipt(jsonDecode(writtenBy050) as Map<String, Object?>);
+
+      expect(again.total, buildReceipt().total);
+      // `paid` ha sempre significato contanti: un resto si dà solo lì.
+      expect(again.payments.single.method, PaymentMethod.cash);
+      expect(again.payments.single.amount, const Money(1000));
+      expect(again.change, const Money(279));
     });
 
     test('un reso letto come se fosse uno scontrino', () {
@@ -243,6 +273,61 @@ void main() {
       final Receipt again = codec.decodeReceipt(json);
       expect(again.lines.first.vatRate, VatRate.reduced);
       expect(again.vatSummary.first.rate, VatRate.reduced);
+    });
+  });
+
+  group('Pagamenti sul filo', () {
+    Receipt mixed() => (ReceiptBuilder(
+          id: 'M-1',
+          issuedAt: DateTime.utc(2026, 9, 13),
+        )..addLine(
+                description: 'Merce',
+                unitPrice: const Money(2200),
+                vatRate: VatRate.standard,
+              ))
+            .closeWithPayments(<Payment>[
+          Payment.electronic(const Money(1500)),
+          Payment(const PaymentMethod('meal_voucher', label: 'Buono pasto'),
+              const Money(400)),
+          Payment.cash(const Money(600)),
+        ]);
+
+    test('un pagamento misto torna indietro con i suoi mezzi e il suo resto',
+        () {
+      final Receipt original = mixed();
+      final Receipt again = codec.decodeReceipt(
+        jsonDecode(jsonEncode(codec.encodeReceipt(original)))
+            as Map<String, Object?>,
+      );
+
+      expect(again.payments.map((Payment p) => p.method.code),
+          <String>['electronic', 'meal_voucher', 'cash']);
+      expect(again.payments.map((Payment p) => p.amount.cents),
+          <int>[1500, 400, 600]);
+      expect(again.change, const Money(300));
+    });
+
+    test('un mezzo che questa versione non conosce torna indietro com\'era',
+        () {
+      // Il buono pasto non è fra i mezzi predefiniti: se la decodifica lo
+      // confrontasse con quelli, perderebbe `givesChange` o l'etichetta.
+      final Receipt again = codec.decodeReceipt(codec.encodeReceipt(mixed()));
+      final PaymentMethod voucher = again.payments[1].method;
+
+      expect(voucher.label, 'Buono pasto');
+      expect(voucher.givesChange, isFalse);
+    });
+
+    test('pagamenti che non sommano all\'incasso dichiarato', () {
+      final Map<String, Object?> json = codec.encodeReceipt(mixed())
+        ..['paid'] = 9999;
+      expect(() => codec.decodeReceipt(json), throwsFormatException);
+    });
+
+    test('schema 2 senza pagamenti', () {
+      final Map<String, Object?> json = codec.encodeReceipt(mixed())
+        ..remove('payments');
+      expect(() => codec.decodeReceipt(json), throwsFormatException);
     });
   });
 }

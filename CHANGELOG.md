@@ -1,5 +1,30 @@
 # Changelog
 
+## 0.6.0
+
+- **Pagamenti misti.** `ReceiptBuilder.closeWithPayments(List<Payment>)` chiude uno
+  scontrino con più pagamenti, e `Receipt.payments` li restituisce. `Payment` e
+  `PaymentMethod` sono nuovi; i mezzi predefiniti sono `PaymentMethod.cash` ed
+  `PaymentMethod.electronic`, e chiunque ne può definire altri.
+- **Il resto esce solo da mezzi che danno resto.** Se la parte versata con mezzi che non
+  danno resto supera il totale, `closeWithPayments` solleva il nuovo
+  `ChangeNotAvailableError`: 25 € con la carta su 22 non sono 3 € di resto, sono 3 € che
+  nel cassetto non ci sono.
+- **L'API Dart non si rompe.** `close(paid:)` resta, ed equivale a un pagamento in contanti
+  — il significato che `change` ha sempre avuto. Il costruttore di `Receipt` accetta i
+  pagamenti come parametro facoltativo.
+- **Il formato JSON invece passa allo schema 2**, con un campo `payments`, ed è per questo
+  che la versione è `0.6.0` e non `0.5.1`. Un documento scritto dalla `0.5.0` si rilegge
+  (verificato sul testo esatto che produceva); un servizio fermo alla `0.5.0` rifiuta i
+  documenti nuovi, come l'`schemaVersion` era stato messo lì per fare. Pagamenti che non
+  sommano a `paid` sono una `FormatException`.
+- **Le proprietà fiscali restano verdi senza essere toccate** mentre il generatore ora paga
+  misto, con contanti in eccesso e con quote elettroniche fino al totale: quanto e come si
+  paga non entra in nessuna invariante fiscale. Due proprietà nuove sul resto.
+- **Dichiarato:** il reso resta senza metodo di rimborso, e con i pagamenti misti è una
+  semplificazione più visibile di prima. Il buono pasto che fa perdere l'eccedenza non è
+  modellato — qui è un errore.
+
 ## 0.5.0
 
 - **Serializzazione JSON**, con `ReceiptJson`: `encodeReceipt`, `decodeReceipt`,

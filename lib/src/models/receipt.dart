@@ -1,6 +1,7 @@
 import '../formatting/money_formatter.dart';
 import '../vat_calculator.dart';
 import '../money.dart';
+import 'payment.dart';
 import 'receipt_line.dart';
 
 /// Scontrino chiuso e immutabile.
@@ -21,8 +22,13 @@ class Receipt {
     required this.paid,
     required List<Money> netLineTotals,
     required List<VatBreakdown> vatSummary,
+    List<Payment>? payments,
   })  : assert(netLineTotals.length == lines.length,
             'Un totale netto per ogni riga'),
+        _payments = List<Payment>.unmodifiable(
+          payments ??
+              (paid.isZero ? <Payment>[] : <Payment>[Payment.cash(paid)]),
+        ),
         _lines = List<ReceiptLine>.unmodifiable(lines),
         _netLineTotals = List<Money>.unmodifiable(netLineTotals),
         _vatSummary = List<VatBreakdown>.unmodifiable(vatSummary);
@@ -35,14 +41,22 @@ class Receipt {
   /// Istante di emissione.
   final DateTime issuedAt;
   final List<ReceiptLine> _lines;
+  final List<Payment> _payments;
   final List<Money> _netLineTotals;
   final List<VatBreakdown> _vatSummary;
 
   /// Sconto applicato all'intero documento.
   final Money documentDiscount;
 
-  /// Importo incassato.
+  /// Importo incassato: la somma di [payments].
   final Money paid;
+
+  /// Pagamenti con cui è stato saldato, in ordine di inserimento.
+  ///
+  /// Uno scontrino costruito senza indicarli, com'era prima della 0.6.0, ne
+  /// ha uno solo in contanti pari a [paid]: è il significato che [change] ha
+  /// sempre avuto, perché un resto si dà solo sul contante.
+  List<Payment> get payments => _payments;
 
   /// Righe del documento, in ordine di inserimento. Non modificabile.
   List<ReceiptLine> get lines => _lines;
@@ -76,6 +90,11 @@ class Receipt {
       Money.sum(_vatSummary.map((VatBreakdown v) => v.taxable));
 
   /// Resto da restituire al cliente.
+  ///
+  /// Esce sempre da pagamenti che danno resto: `ReceiptBuilder` rifiuta di
+  /// chiudere uno scontrino in cui la parte versata con mezzi che non danno
+  /// resto supera il totale. Per questo la formula resta `paid - total` anche
+  /// con i pagamenti misti.
   Money get change => paid - total;
 
   /// Numero di articoli venduti.

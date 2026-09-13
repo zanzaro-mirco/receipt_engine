@@ -1,5 +1,6 @@
 import 'formatting/money_formatter.dart';
 import 'models/discount.dart';
+import 'models/payment.dart';
 import 'models/receipt.dart';
 import 'models/receipt_line.dart';
 import 'models/vat_rate.dart';
@@ -27,6 +28,26 @@ class InsufficientPaymentError extends StateError {
 
   /// Importo offerto, inferiore al dovuto.
   final Money paid;
+}
+
+/// Errore sollevato quando il resto dovrebbe uscire da un pagamento che non
+/// dà resto.
+///
+/// Totale 22 €, pagati 25 con la carta: il resto di 3 € non è in cassa, perché
+/// la carta ha addebitato 25 e nel cassetto non è entrato niente. Non è un
+/// incasso insufficiente, è un incasso che nessuno può pareggiare.
+class ChangeNotAvailableError extends StateError {
+  /// Crea l'errore a partire dal dovuto e da quanto versato senza resto.
+  ChangeNotAvailableError(this.due, this.withoutChange)
+      : super('Versati ${const PlainMoneyFormatter().format(withoutChange)} '
+            'con mezzi che non danno resto, oltre il dovuto '
+            '${const PlainMoneyFormatter().format(due)}');
+
+  /// Totale del documento.
+  final Money due;
+
+  /// Somma dei pagamenti con mezzi che non danno resto, superiore al dovuto.
+  final Money withoutChange;
 }
 
 /// Costruisce uno scontrino passo dopo passo e lo chiude in un [Receipt]
@@ -117,17 +138,56 @@ class ReceiptBuilder {
     return this;
   }
 
-  /// Chiude lo scontrino con l'importo incassato.
+  /// Chiude lo scontrino con un incasso in contanti.
+  ///
+  /// È il caso più comune e resta la scorciatoia: equivale a
+  /// [closeWithPayments] con un solo pagamento in contanti pari a [paid].
   Receipt close({required Money paid}) {
     _ensureOpen();
-    if (_lines.isEmpty) {
-      throw StateError('Non si può chiudere uno scontrino senza righe');
+    _ensureLines();
+    // Controllato qui e non delegato: un importo negativo non è un
+    // `Payment` valido, e chi chiudeva con un incasso sbagliato riceveva
+    // questo errore prima della 0.6.0 — deve continuare a riceverlo.
+    if (paid < currentTotal) {
+      throw InsufficientPaymentError(currentTotal, paid);
     }
+    return closeWithPayments(
+      paid.isZero ? const <Payment>[] : <Payment>[Payment.cash(paid)],
+    );
+  }
+
+  /// Chiude lo scontrino con uno o più pagamenti.
+  ///
+  /// Due regole, nell'ordine:
+  ///
+  /// - la somma dei pagamenti deve coprire il totale, altrimenti
+  ///   [InsufficientPaymentError];
+  /// - la parte versata con mezzi che **non danno resto** non può superare
+  ///   il totale, altrimenti [ChangeNotAvailableError]. Detto altrimenti: il
+  ///   resto non può essere più grande di quanto versato in contanti.
+  ///
+  /// ```dart
+  /// // Totale 22 €: 15 con la carta, 10 in contanti, 3 di resto.
+  /// builder.closeWithPayments(<Payment>[
+  ///   Payment.electronic(Money.fromEuro(15)),
+  ///   Payment.cash(Money.fromEuro(10)),
+  /// ]);
+  /// ```
+  Receipt closeWithPayments(List<Payment> payments) {
+    _ensureOpen();
+    _ensureLines();
 
     final Money discount = _documentDiscountAmount;
     final Money total = subtotal - discount;
+    final Money paid = Money.sum(payments.map((Payment p) => p.amount));
     if (paid < total) {
       throw InsufficientPaymentError(total, paid);
+    }
+    final Money withoutChange = Money.sum(payments
+        .where((Payment p) => !p.method.givesChange)
+        .map((Payment p) => p.amount));
+    if (withoutChange > total) {
+      throw ChangeNotAvailableError(total, withoutChange);
     }
 
     // Un solo calcolo: i totali di riga al netto dello sconto e il riepilogo
@@ -144,6 +204,7 @@ class ReceiptBuilder {
       lines: _lines,
       documentDiscount: discount,
       paid: paid,
+      payments: payments,
       netLineTotals: totals.netLineTotals,
       vatSummary: totals.vatSummary,
     );
@@ -151,5 +212,11 @@ class ReceiptBuilder {
 
   void _ensureOpen() {
     if (_closed) throw ReceiptClosedError();
+  }
+
+  void _ensureLines() {
+    if (_lines.isEmpty) {
+      throw StateError('Non si può chiudere uno scontrino senza righe');
+    }
   }
 }

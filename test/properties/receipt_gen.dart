@@ -59,8 +59,12 @@ class LineSpec {
 /// Descrizione di uno scontrino intero.
 class ReceiptSpec {
   /// Crea la descrizione di uno scontrino.
-  const ReceiptSpec(
-      {required this.lines, required this.documentDiscountPercent});
+  const ReceiptSpec({
+    required this.lines,
+    required this.documentDiscountPercent,
+    this.electronicShareTenths = 0,
+    this.cashExtraCents = 0,
+  });
 
   /// Le righe, nell'ordine in cui verranno inserite.
   final List<LineSpec> lines;
@@ -68,8 +72,15 @@ class ReceiptSpec {
   /// Sconto di documento in percentuale. Zero significa nessuno sconto.
   final int documentDiscountPercent;
 
-  /// Costruisce lo scontrino vero.
-  Receipt build({String id = 'S'}) {
+  /// Quota del totale pagata con un mezzo elettronico, in decimi: zero è
+  /// tutto in contanti, dieci tutto elettronico.
+  final int electronicShareTenths;
+
+  /// Contanti versati oltre il dovuto: il resto che ci si aspetta.
+  final int cashExtraCents;
+
+  /// Il builder con righe e sconto, ancora da chiudere.
+  ReceiptBuilder openBuilder({String id = 'S'}) {
     final ReceiptBuilder builder = ReceiptBuilder(
       id: id,
       issuedAt: DateTime.utc(2026, 9, 12),
@@ -87,8 +98,29 @@ class ReceiptSpec {
     if (documentDiscountPercent > 0) {
       builder.applyDocumentDiscount(Discount.percent(documentDiscountPercent));
     }
-    // Il pagamento non c'entra con nessuna delle proprietà: si paga esatto.
-    return builder.close(paid: builder.currentTotal);
+    return builder;
+  }
+
+  /// Costruisce lo scontrino vero, pagato come dice la `spec`.
+  Receipt build({String id = 'S'}) {
+    final ReceiptBuilder builder = openBuilder(id: id);
+    return builder.closeWithPayments(paymentsFor(builder.currentTotal));
+  }
+
+  /// I pagamenti per [total], decisi dalla `spec` e da nient'altro — niente
+  /// sorgente casuale qui dentro, per la ragione scritta su [partitionTenths].
+  ///
+  /// La parte elettronica non supera mai il totale, quindi lo scontrino si
+  /// chiude sempre. Fino alla 0.5.0 il generatore pagava esatto in contanti;
+  /// ora paga misto, e le proprietà fiscali devono restare verdi senza essere
+  /// toccate: quanto e come si paga non entra in nessuna di loro.
+  List<Payment> paymentsFor(Money total) {
+    final int electronic = total.cents * electronicShareTenths ~/ 10;
+    final int cash = total.cents - electronic + cashExtraCents;
+    return <Payment>[
+      if (electronic > 0) Payment.electronic(Money(electronic)),
+      if (cash > 0) Payment.cash(Money(cash)),
+    ];
   }
 
   @override
@@ -97,6 +129,9 @@ class ReceiptSpec {
         for (final LineSpec line in lines) '  $line',
         if (documentDiscountPercent > 0)
           '  sconto di documento $documentDiscountPercent%',
+        if (electronicShareTenths > 0)
+          '  elettronico per ${electronicShareTenths * 10}% del totale',
+        if (cashExtraCents > 0) '  contanti in più: ${cashExtraCents}c',
       ].join('\n');
 }
 
@@ -184,6 +219,9 @@ final Gen<ReceiptSpec> receiptGen = Gen<ReceiptSpec>(
       for (int i = 0; i < 1 + r.nextInt(6); i++) lineGen.generate(r),
     ],
     documentDiscountPercent: discountPercentOf(r),
+    // Tutto in contanti in un caso su tre, perché è ancora il caso più comune.
+    electronicShareTenths: r.nextInt(3) == 0 ? 0 : r.nextInt(11),
+    cashExtraCents: r.nextInt(2) == 0 ? 0 : 1 + r.nextInt(2000),
   ),
   shrink: _shrinkReceipt,
 );
@@ -193,14 +231,27 @@ int discountPercentOf(Random r) => r.nextInt(4) == 0 ? 1 + r.nextInt(40) : 0;
 
 Iterable<ReceiptSpec> _shrinkReceipt(ReceiptSpec spec) sync* {
   // Prima si toglie roba: meno righe è la semplificazione che fa capire di più.
+  if (spec.electronicShareTenths != 0 || spec.cashExtraCents != 0) {
+    yield ReceiptSpec(
+      lines: spec.lines,
+      documentDiscountPercent: spec.documentDiscountPercent,
+    );
+  }
   if (spec.documentDiscountPercent != 0) {
-    yield ReceiptSpec(lines: spec.lines, documentDiscountPercent: 0);
+    yield ReceiptSpec(
+      lines: spec.lines,
+      documentDiscountPercent: 0,
+      electronicShareTenths: spec.electronicShareTenths,
+      cashExtraCents: spec.cashExtraCents,
+    );
   }
   if (spec.lines.length > 1) {
     for (int i = 0; i < spec.lines.length; i++) {
       yield ReceiptSpec(
         lines: <LineSpec>[...spec.lines]..removeAt(i),
         documentDiscountPercent: spec.documentDiscountPercent,
+        electronicShareTenths: spec.electronicShareTenths,
+        cashExtraCents: spec.cashExtraCents,
       );
     }
   }
@@ -212,6 +263,8 @@ Iterable<ReceiptSpec> _shrinkReceipt(ReceiptSpec spec) sync* {
       yield ReceiptSpec(
         lines: lines,
         documentDiscountPercent: spec.documentDiscountPercent,
+        electronicShareTenths: spec.electronicShareTenths,
+        cashExtraCents: spec.cashExtraCents,
       );
     }
   }

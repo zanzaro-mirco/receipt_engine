@@ -154,6 +154,39 @@ void main() {
     });
   });
 
+  group('Proprietà · il resto', () {
+    test('esce solo da quanto versato con mezzi che danno resto', () {
+      forAll(receiptGen, (ReceiptSpec spec) {
+        final Receipt receipt = spec.build();
+        final Money withChange = Money.sum(receipt.payments
+            .where((Payment p) => p.method.givesChange)
+            .map((Payment p) => p.amount));
+
+        expect(receipt.change <= withChange, isTrue,
+            reason: 'Resto ${receipt.change.cents}c, ma dal cassetto ne '
+                'possono uscire ${withChange.cents}c');
+        expect(receipt.paid - receipt.change, receipt.total,
+            reason: 'Incassato meno resto non fa il totale');
+      });
+    });
+
+    test('pagare elettronico oltre il totale non chiude mai lo scontrino', () {
+      forAll(receiptGen, (ReceiptSpec spec) {
+        final ReceiptBuilder builder = spec.openBuilder();
+        final Money over =
+            builder.currentTotal + Money(1 + spec.cashExtraCents);
+
+        expect(
+          () => builder.closeWithPayments(<Payment>[Payment.electronic(over)]),
+          throwsA(isA<ChangeNotAvailableError>()),
+        );
+        // E il builder resta aperto: un pagamento rifiutato non consuma il
+        // documento, alla cassa si riprova con un altro mezzo.
+        expect(builder.isClosed, isFalse);
+      });
+    });
+  });
+
   group('Proprietà · il documento sopravvive al viaggio', () {
     const ReceiptJson codec = ReceiptJson();
 
@@ -173,6 +206,14 @@ void main() {
         expect(again.issuedAt, original.issuedAt);
         expect(again.paid, original.paid);
         expect(again.documentDiscount, original.documentDiscount);
+        expect(again.change, original.change);
+        expect(again.payments.length, original.payments.length);
+        for (int i = 0; i < again.payments.length; i++) {
+          expect(again.payments[i].method, original.payments[i].method);
+          expect(again.payments[i].method.givesChange,
+              original.payments[i].method.givesChange);
+          expect(again.payments[i].amount, original.payments[i].amount);
+        }
         expect(again.total, original.total,
             reason: 'Il totale è cambiato passando dal JSON');
         expect(again.totalTax, original.totalTax);
@@ -233,6 +274,8 @@ void main() {
         final Receipt reversed = ReceiptSpec(
           lines: spec.lines.reversed.toList(),
           documentDiscountPercent: spec.documentDiscountPercent,
+          electronicShareTenths: spec.electronicShareTenths,
+          cashExtraCents: spec.cashExtraCents,
         ).build();
 
         expect(reversed.total, asIs.total,

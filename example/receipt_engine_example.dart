@@ -64,4 +64,37 @@ void main() {
   // non ricalcolati. Un documento fiscale si rilegge, non si rifà.
   print('  Ricalcolato? no: e i totali di riga sono ancora '
       '${reread.netLineTotals.map((Money m) => fmt.format(m)).join(', ')}');
+
+  // Un altro cliente paga misto: 15 € con la carta e 10 in contanti su un
+  // totale di 22. Il resto esce dal cassetto, e solo da lì.
+  final Receipt mixed = ReceiptBuilder(id: 'T-0002')
+      .addLine(
+    description: 'Menù pranzo',
+    unitPrice: Money.fromEuro(22),
+    vatRate: VatRate.reduced,
+  )
+      .closeWithPayments(<Payment>[
+    Payment.electronic(Money.fromEuro(15)),
+    Payment.cash(Money.fromEuro(10)),
+  ]);
+
+  print('');
+  print('Scontrino ${mixed.id}, pagato misto');
+  for (final Payment payment in mixed.payments) {
+    print('  $payment');
+  }
+  print('  Resto:  ${fmt.format(mixed.change)}');
+
+  // Con la sola carta, 25 € su 22 non fanno 3 € di resto: non sono in cassa.
+  try {
+    ReceiptBuilder(id: 'T-0003')
+        .addLine(
+      description: 'Menù pranzo',
+      unitPrice: Money.fromEuro(22),
+      vatRate: VatRate.reduced,
+    )
+        .closeWithPayments(<Payment>[Payment.electronic(Money.fromEuro(25))]);
+  } on ChangeNotAvailableError catch (e) {
+    print('  Con la sola carta: ${e.message}');
+  }
 }
