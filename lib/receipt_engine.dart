@@ -13,6 +13,7 @@ export 'src/models/receipt_line.dart';
 export 'src/models/return_receipt.dart';
 export 'src/models/vat_rate.dart';
 export 'src/money.dart';
+export 'src/serialization/receipt_json.dart';
 export 'src/receipt_builder.dart';
 export 'src/return_builder.dart';
 export 'src/vat_calculator.dart';

@@ -35,6 +35,8 @@ riutilizzabile da un'app mobile, da un backend o da un tool a riga di comando.
 | Sconti polimorfi invece di uno `switch` | Aggiungere un "3x2" non richiede di modificare il calcolo esistente |
 | Ripartizione dello sconto come strategia sostituibile | È una scelta contabile, non un dettaglio di calcolo |
 | Formattazione fuori dal value object | Cambia con la lingua e col contesto: non deve stare nel dominio |
+| Serializzazione fuori dai modelli, e a mano | Uno scontrino non deve sapere come viaggia. `json_serializable` porterebbe `build_runner` e file generati per sei modelli che cambiano di rado |
+| La rilettura non ricalcola | Un documento fiscale emesso si rilegge, non si rifà: altrimenti una correzione futura agli arrotondamenti cambierebbe scontrini già consegnati |
 | Zero dipendenze a runtime | Il dominio non deve sapere che esistono Flutter o un database |
 
 ## Installazione
@@ -101,6 +103,35 @@ sulle righe rese — imposta compresa.
 L'esempio completo, eseguibile, è in
 [`example/receipt_engine_example.dart`](example/receipt_engine_example.dart).
 
+## Fuori dal processo: JSON
+
+Chi lo usa da un backend, o dietro una coda, deve poter scrivere uno scontrino da qualche
+parte e rileggerlo identico.
+
+```dart
+const ReceiptJson codec = ReceiptJson();
+
+final String wire = jsonEncode(codec.encodeReceipt(receipt));
+final Receipt again =
+    codec.decodeReceipt(jsonDecode(wire) as Map<String, Object?>);
+```
+
+Il codec produce una **mappa**, non una stringa: `dart:convert` non compare da nessuna
+parte dentro il pacchetto, così la mappa si annida in un documento più grande, va a un
+encoder diverso o finisce in un database che parla già di mappe.
+
+Due cose vale la pena sapere prima di usarlo.
+
+**La rilettura non ricalcola niente.** I totali di riga al netto dello sconto e il
+riepilogo IVA vengono riletti dal documento, non rifatti passando per `ReceiptBuilder`. Un
+documento fiscale emesso si rilegge: se lo si ricostruisse dal builder, una correzione
+futura agli arrotondamenti cambierebbe retroattivamente scontrini già consegnati al
+cliente.
+
+**Ogni documento porta uno `schemaVersion`.** È la differenza fra un formato e uno scarico
+di campi: rileggere un documento scritto da una versione più recente del pacchetto solleva
+un errore invece di produrre uno scontrino monco.
+
 ## Struttura
 
 ```
@@ -114,6 +145,7 @@ lib/
     receipt_builder.dart           ciclo di vita dello scontrino
     return_builder.dart            ciclo di vita del reso
     formatting/money_formatter.dart
+    serialization/receipt_json.dart  lettura e scrittura JSON
     models/
       vat_rate.dart  discount.dart  receipt_line.dart
       receipt.dart   return_receipt.dart
@@ -171,7 +203,6 @@ Pubblicato su [pub.dev](https://pub.dev/packages/receipt_engine) con **160/160**
 
 Quello che manca, in ordine di quanto lo chiederebbe chi lo sta già usando:
 
-- ⬜ Serializzazione JSON, per il trasporto verso un backend
 - ⬜ Pagamenti misti (contanti ed elettronico sulla stessa transazione)
 
 E una cosa che **non** arriverà, che è diverso dal mancare. Fino alla `0.3.1` questa riga

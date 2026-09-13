@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0
+
+- **Serializzazione JSON**, con `ReceiptJson`: `encodeReceipt`, `decodeReceipt`,
+  `encodeReturnReceipt`, `decodeReturnReceipt`. Nessuna modifica incompatibile e nessuna
+  dipendenza nuova — il codec è scritto a mano, e restituisce una `Map` invece di una
+  stringa perché `dart:convert` non entri nel pacchetto.
+- **La rilettura non ricalcola.** I totali di riga al netto dello sconto e il riepilogo IVA
+  vengono riletti dal documento, non rifatti passando per `ReceiptBuilder`: un documento
+  fiscale emesso si rilegge, non si riemette. `ARCHITECTURE.md` spiega cosa andrebbe storto
+  altrimenti.
+- **Ogni documento porta uno `schemaVersion`.** Rileggere un documento scritto da una
+  versione più recente del pacchetto solleva una `FormatException` invece di produrre uno
+  scontrino monco. Uno schema più vecchio si legge: il controllo è asimmetrico apposta.
+- **Errori distinti per causa distinta:** `FormatException` quando il problema è di
+  trasporto (campo mancante, importo che non è un intero di centesimi, tipo di documento
+  sbagliato), `ArgumentError` quando la forma è giusta ma il contenuto no — una quantità
+  negativa la rifiuta `ReceiptLine`, che è il posto che conosce la regola.
+- **Due test e non uno.** Un round-trip su scontrini generati (l'ottava proprietà) e un
+  test che scrive per esteso la mappa attesa. Il secondo esiste perché il primo non può
+  accorgersi di un nome di campo cambiato in scrittura *e* in lettura: verificato
+  rinominando davvero un campo, la proprietà resta verde e il test del formato fallisce.
+- L'esempio eseguibile ora mostra anche il giro fuori dal processo e ritorno.
+
 ## 0.4.0
 
 - **Modifica non compatibile: `VatRate.percentage` è un `num` e non più un `int`.** La

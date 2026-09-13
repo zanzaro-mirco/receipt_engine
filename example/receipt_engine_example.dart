@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:receipt_engine/receipt_engine.dart';
 
 const MoneyFormatter fmt = ItalianMoneyFormatter();
@@ -45,4 +47,21 @@ void main() {
   print('  Davvero pagato:  ${fmt.format(receipt.netLineTotals[1])}');
   print('  Saldo dopo il reso: '
       '${fmt.format(receipt.total + reversal.total)}');
+
+  // Lo scontrino esce dal processo: verso un backend, una coda, un file.
+  // `dart:convert` sta qui nell'esempio e non dentro il pacchetto — il codec
+  // produce una mappa, e chi la usa sceglie come scriverla.
+  const ReceiptJson codec = ReceiptJson();
+  final String wire = jsonEncode(codec.encodeReceipt(receipt));
+  final Receipt reread =
+      codec.decodeReceipt(jsonDecode(wire) as Map<String, Object?>);
+
+  print('');
+  print('JSON: ${wire.length} caratteri');
+  print('  Totale riletto: ${fmt.format(reread.total)}');
+  print('  Imposta riletta: ${fmt.format(reread.totalTax)}');
+  // Il documento riletto non passa dal builder: i totali sono quelli emessi,
+  // non ricalcolati. Un documento fiscale si rilegge, non si rifà.
+  print('  Ricalcolato? no: e i totali di riga sono ancora '
+      '${reread.netLineTotals.map((Money m) => fmt.format(m)).join(', ')}');
 }

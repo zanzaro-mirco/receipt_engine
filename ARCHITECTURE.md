@@ -189,6 +189,51 @@ Quindi la proprietà non pretende zero: pretende che lo scarto **resti legato al
 documenti**. Se un giorno lo superasse, vorrebbe dire che gli errori hanno smesso di essere
 indipendenti e hanno cominciato a comporsi — e quello sarebbe un difetto vero.
 
+## Il formato JSON, e perché la rilettura non ricalcola
+
+`ReceiptJson` sta in `src/serialization/` e non dentro i modelli, per la stessa ragione per
+cui ci sta `MoneyFormatter`: uno scontrino non deve sapere come viaggia, come non deve
+sapere come si scrive un numero in italiano. Chi non serializza non paga niente per quella
+classe, e chi la usa può sostituirla senza toccare il dominio.
+
+**A mano, senza `json_serializable`.** Il generatore porterebbe `build_runner`, file
+generati nel repository e un passo di build per chiunque contribuisca. I modelli sono sei e
+cambiano di rado: costerebbe più di quanto risparmia, e il pacchetto perderebbe la riga che
+dice zero dipendenze.
+
+**Il codec restituisce una `Map` e non una stringa**, così `dart:convert` non entra nel
+pacchetto: la mappa si annida dentro un documento più grande, la scrive l'encoder che
+preferisci, la ingoia un database che parla già di mappe.
+
+### La decisione vera: `decodeReceipt` non passa dal builder
+
+I totali di riga al netto dello sconto e il riepilogo IVA nascono dalla stessa ripartizione
+dentro `ReceiptBuilder.close`. Sarebbe stato più corto ricostruire lo scontrino chiamando di
+nuovo il builder e lasciargli rifare i conti.
+
+Sarebbe stato anche sbagliato. Rileggere passando dal builder significa **riemettere** un
+documento fiscale: se un giorno si corregge un arrotondamento, tutti gli scontrini già
+emessi tornerebbero indietro con numeri diversi da quelli consegnati al cliente. Il
+documento riletto non sarebbe più quello emesso, sarebbe quello che il codice di oggi
+emetterebbe al suo posto.
+
+Quindi `Receipt` viene costruito direttamente dai numeri che stanno nel JSON, **derivati
+compresi**. Il costruttore pubblico di `Receipt` esisteva già con questa nota: costruirlo a
+mano con numeri incoerenti è possibile ed è responsabilità di chi lo fa. Il codec è uno di
+quei chiamanti, e la sua responsabilità è non inventarsi niente.
+
+### Due test, perché uno non basta
+
+Il **round-trip su scontrini generati** è l'ottava proprietà: per ogni scontrino, scriverlo
+in JSON e rileggerlo da una stringa vera restituisce lo stesso documento — totale, imposta,
+riepilogo riga per riga, sconti.
+
+Da solo non basta, e la falsificazione lo dimostra. Rinominando `netLineTotals` in
+`lineNetTotals` in scrittura **e** in lettura, la proprietà resta verde: un formato sbagliato
+in modo simmetrico torna indietro identico. A fallire è l'altro test, quello che scrive per
+esteso la mappa attesa — ed è lì che sta il valore, perché dall'altra parte del filo c'è
+qualcuno che ha già scritto il suo parser e per lui un nome di campo è un contratto.
+
 ## Dove ho consapevolmente semplificato
 
 - **`VatCalculator` è una classe concreta, non un'interfaccia.** Lo scorporo è
@@ -209,6 +254,10 @@ indipendenti e hanno cominciato a comporsi — e quello sarebbe un difetto vero.
 - **Non esiste il reso di un reso, né un termine oltre il quale non si rende.** Sono
   regole commerciali, non fiscali: cambiano da catena a catena e starebbero sopra
   questo livello.
+- **Le date serializzate si normalizzano in UTC.** `issuedAt` viene scritto con
+  `toIso8601String` dopo `toUtc`, quindi un documento emesso con una data locale si rilegge
+  con lo stesso istante ma senza il fuso di partenza. L'istante è il dato che conta; un
+  fuso orario dentro un documento fiscale è una fonte di bug che non paga nulla.
 - **Le regole fiscali di altri paesi non ci sono, e non è un ritardo.** Dalla `0.4.0`
   l'aliquota è un `num`, così il 5,5% francese si esprime e si scorpora: l'aritmetica è
   aperta a qualunque percentuale. Il dominio no. Sapere quale bene sta a quale aliquota o

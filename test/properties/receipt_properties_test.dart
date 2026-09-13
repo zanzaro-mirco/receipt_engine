@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:receipt_engine/receipt_engine.dart';
 import 'package:test/test.dart';
 
@@ -148,6 +150,78 @@ void main() {
           reason: 'Lo scarto fra imposta stornata e incassata supera il numero '
               'di documenti: non è arrotondamento, è accumulo',
         );
+      });
+    });
+  });
+
+  group('Proprietà · il documento sopravvive al viaggio', () {
+    const ReceiptJson codec = ReceiptJson();
+
+    test('scritto in JSON e riletto, è lo stesso documento', () {
+      forAll(receiptGen, (ReceiptSpec spec) {
+        final Receipt original = spec.build();
+
+        // Il giro passa da una stringa vera e non dalla sola mappa: è
+        // attraversando `jsonEncode`/`jsonDecode` che i tipi numerici cambiano
+        // sotto i piedi, e un intero torna indietro come `double`.
+        final Receipt again = codec.decodeReceipt(
+          jsonDecode(jsonEncode(codec.encodeReceipt(original)))
+              as Map<String, Object?>,
+        );
+
+        expect(again.id, original.id);
+        expect(again.issuedAt, original.issuedAt);
+        expect(again.paid, original.paid);
+        expect(again.documentDiscount, original.documentDiscount);
+        expect(again.total, original.total,
+            reason: 'Il totale è cambiato passando dal JSON');
+        expect(again.totalTax, original.totalTax);
+        expect(again.totalTaxable, original.totalTaxable);
+        expect(again.netLineTotals, original.netLineTotals,
+            reason: 'I totali di riga al netto non sono quelli emessi');
+
+        expect(again.lines.length, original.lines.length);
+        for (int i = 0; i < again.lines.length; i++) {
+          final ReceiptLine a = again.lines[i];
+          final ReceiptLine b = original.lines[i];
+          expect(a.description, b.description);
+          expect(a.unitPrice, b.unitPrice);
+          expect(a.vatRate, b.vatRate);
+          expect(a.quantity, b.quantity);
+          expect(a.total, b.total, reason: 'Riga $i: totale diverso');
+          expect(a.discountAmount, b.discountAmount,
+              reason: 'Riga $i: sconto diverso');
+        }
+
+        expect(again.vatSummary.length, original.vatSummary.length);
+        for (int i = 0; i < again.vatSummary.length; i++) {
+          expect(again.vatSummary[i].rate, original.vatSummary[i].rate);
+          expect(again.vatSummary[i].gross, original.vatSummary[i].gross);
+          expect(again.vatSummary[i].taxable, original.vatSummary[i].taxable);
+          expect(again.vatSummary[i].tax, original.vatSummary[i].tax);
+        }
+      });
+    });
+
+    test('anche il documento di reso torna indietro intero', () {
+      forAll(receiptGen, (ReceiptSpec spec) {
+        final Receipt original = spec.build();
+        final ReturnReceipt reso = (ReturnBuilder(id: 'R', original: original)
+              ..addEverything())
+            .close();
+
+        final ReturnReceipt again = codec.decodeReturnReceipt(
+          jsonDecode(jsonEncode(codec.encodeReturnReceipt(reso)))
+              as Map<String, Object?>,
+        );
+
+        expect(again.originalReceiptId, reso.originalReceiptId);
+        expect(again.total, reso.total);
+        expect(again.refund, reso.refund);
+        expect(again.totalTax, reso.totalTax);
+        expect(again.itemCount, reso.itemCount);
+        expect(again.lines.map((ReturnLine l) => l.lineIndex),
+            reso.lines.map((ReturnLine l) => l.lineIndex));
       });
     });
   });
