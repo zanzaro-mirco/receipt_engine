@@ -9,6 +9,8 @@ Flutter, database o I/O.
 [![CI](https://github.com/zanzaro-mirco/receipt_engine/actions/workflows/ci.yml/badge.svg)](https://github.com/zanzaro-mirco/receipt_engine/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
+È uno dei quattro progetti del mio portfolio: la scheda, insieme agli altri tre, è su [zanzaro-mirco.github.io](https://zanzaro-mirco.github.io/progetti/receipt-engine/).
+
 ## Perché esiste
 
 Nasce da un problema reale incontrato lavorando su software per registratori di cassa:
